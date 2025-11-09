@@ -19,9 +19,8 @@ uniform mat4 view;
 uniform mat4 projection;
 
 // Identificador que define qual objeto está sendo desenhado no momento
-#define SPHERE 0
-#define BUNNY  1
-#define PLANE  2
+#define AIRCRAFT 0
+
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -30,8 +29,7 @@ uniform vec4 bbox_max;
 
 // Variáveis para acesso das imagens de textura
 uniform sampler2D TextureImage0;
-uniform sampler2D TextureImage1;
-uniform sampler2D TextureImage2;
+
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -68,46 +66,7 @@ void main()
     float U = 0.0;
     float V = 0.0;
 
-    if ( object_id == SPHERE )
-    {
-        // PREENCHA AQUI as coordenadas de textura da esfera, computadas com
-        // projeção esférica EM COORDENADAS DO MODELO. Utilize como referência
-        // o slides 134-150 do documento Aula_20_Mapeamento_de_Texturas.pdf.
-        // A esfera que define a projeção deve estar centrada na posição
-        // "bbox_center" definida abaixo.
-
-        // Você deve utilizar:
-        //   função 'length( )' : comprimento Euclidiano de um vetor
-        //   função 'atan( , )' : arcotangente. Veja https://en.wikipedia.org/wiki/Atan2.
-        //   função 'asin( )'   : seno inverso.
-        //   constante M_PI
-        //   variável position_model
-
-        vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
-
-        float px = position_model.x - bbox_center.x;
-        float py = position_model.y - bbox_center.y;
-        float pz = position_model.z - bbox_center.z;
-
-        float rho = sqrt(px * px + py * py + pz * pz);
-
-        float theta = atan(px, pz); // Longitude
-        float phi   = asin(py / rho); // Latitude
-
-        U = (theta + M_PI) / (2.0f * M_PI);
-        V = (phi + M_PI / 2.0f) / M_PI;
-    }
-    else if ( object_id == BUNNY )
-    {
-        // PREENCHA AQUI as coordenadas de textura do coelho, computadas com
-        // projeção planar XY em COORDENADAS DO MODELO. Utilize como referência
-        // o slides 99-104 do documento Aula_20_Mapeamento_de_Texturas.pdf,
-        // e também use as variáveis min*/max* definidas abaixo para normalizar
-        // as coordenadas de textura U e V dentro do intervalo [0,1]. Para
-        // tanto, veja por exemplo o mapeamento da variável 'p_v' utilizando
-        // 'h' no slides 158-160 do documento Aula_20_Mapeamento_de_Texturas.pdf.
-        // Veja também a Questão 4 do Questionário 4 no Moodle.
-
+    if ( object_id == AIRCRAFT){
         float minx = bbox_min.x;
         float maxx = bbox_max.x;
 
@@ -120,31 +79,16 @@ void main()
         U = (position_model.x - minx) / (maxx - minx);
         V = (position_model.y - miny) / (maxy - miny);
     }
-    else if ( object_id == PLANE )
-    {
-        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
-        U = texcoords.x;
-        V = texcoords.y;
-    }
 
-    // Obtemos a refletância difusa do mapa diurno (TextureImage0)
-    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
-    
-    // Obtemos o mapa de luzes noturnas (TextureImage1)
-    vec3 Kd1 = texture(TextureImage1, vec2(U,V)).rgb;
+    // Obtemos a refletância difusa do mapa diurno (TextureImage1)
+    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;  
 
     // Equação de Iluminação
     float lambert = max(0,dot(n,l));
-    
-    // Calculamos a contribuição das luzes noturnas baseado no termo de Lambert
-    // Quanto mais escuro (menor lambert), mais as luzes da cidade aparecem
-    float nightIntensity = 1.0 - lambert;
-    
-    // Misturamos as texturas:
-    // - Durante o dia (lambert alto): predomina a textura diurna
-    // - Durante a noite (lambert baixo): predomina a textura das luzes
-    // O fator 0.3 controla a intensidade das luzes noturnas
-    color.rgb = Kd0 * (lambert + 0.01) + Kd1 * (nightIntensity * 0.3);
+
+    // Para o avião, usamos apenas a textura básica com iluminação
+    color.rgb = Kd0 * (lambert + 0.1);
+   
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:

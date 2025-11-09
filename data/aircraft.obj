@@ -1,7 +1,7 @@
 # Blender v2.78 (sub 0) OBJ File: 'SpaceShipDetailed.blend'
 # www.blender.org
 mtllib SpaceShipDetailed.mtl
-o Cylinder
+o the aircraft
 v -75.036446 -9.999999 12.500002
 v 4.237816 -8.968720 11.210904
 v 4.237816 0.000001 17.782431
