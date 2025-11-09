@@ -85,8 +85,17 @@ void main()
 
         vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
 
-        U = 0.0;
-        V = 0.0;
+        float px = position_model.x - bbox_center.x;
+        float py = position_model.y - bbox_center.y;
+        float pz = position_model.z - bbox_center.z;
+
+        float rho = sqrt(px * px + py * py + pz * pz);
+
+        float theta = atan(px, pz); // Longitude
+        float phi   = asin(py / rho); // Latitude
+
+        U = (theta + M_PI) / (2.0f * M_PI);
+        V = (phi + M_PI / 2.0f) / M_PI;
     }
     else if ( object_id == BUNNY )
     {
@@ -108,8 +117,8 @@ void main()
         float minz = bbox_min.z;
         float maxz = bbox_max.z;
 
-        U = 0.0;
-        V = 0.0;
+        U = (position_model.x - minx) / (maxx - minx);
+        V = (position_model.y - miny) / (maxy - miny);
     }
     else if ( object_id == PLANE )
     {
@@ -118,13 +127,24 @@ void main()
         V = texcoords.y;
     }
 
-    // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
+    // Obtemos a refletância difusa do mapa diurno (TextureImage0)
     vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+    
+    // Obtemos o mapa de luzes noturnas (TextureImage1)
+    vec3 Kd1 = texture(TextureImage1, vec2(U,V)).rgb;
 
     // Equação de Iluminação
     float lambert = max(0,dot(n,l));
-
-    color.rgb = Kd0 * (lambert + 0.01);
+    
+    // Calculamos a contribuição das luzes noturnas baseado no termo de Lambert
+    // Quanto mais escuro (menor lambert), mais as luzes da cidade aparecem
+    float nightIntensity = 1.0 - lambert;
+    
+    // Misturamos as texturas:
+    // - Durante o dia (lambert alto): predomina a textura diurna
+    // - Durante a noite (lambert baixo): predomina a textura das luzes
+    // O fator 0.3 controla a intensidade das luzes noturnas
+    color.rgb = Kd0 * (lambert + 0.01) + Kd1 * (nightIntensity * 0.3);
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:
