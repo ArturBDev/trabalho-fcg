@@ -18,6 +18,5 @@
 # Other
 *.exe
 *.pdb
-*.obj
 *.o
 *.dll
