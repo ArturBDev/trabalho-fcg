@@ -87,7 +87,7 @@ void main()
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
-        // Para o avião, usamos apenas a textura básica com iluminação
+        // Para o nave, usamos apenas a textura básica com iluminação
         color.rgb = Kd0 * (lambert + 0.1);
     }
 

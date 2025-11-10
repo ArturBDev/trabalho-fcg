@@ -404,7 +404,7 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
 
-        // Desenhamos o modelo do avião
+        // Desenhamos o modelo da nave
         model = Matrix_Scale(0.005f, 0.005f, 0.005f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, AIRCRAFT);
