@@ -19,7 +19,8 @@ uniform mat4 view;
 uniform mat4 projection;
 
 // Identificador que define qual objeto está sendo desenhado no momento
-#define AIRCRAFT 0
+#define SKYBOX 0
+#define AIRCRAFT 1
 
 uniform int object_id;
 
@@ -29,6 +30,7 @@ uniform vec4 bbox_max;
 
 // Variáveis para acesso das imagens de textura
 uniform sampler2D TextureImage0;
+uniform sampler2D TextureImage1;
 
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
@@ -82,13 +84,43 @@ void main()
         V = (position_model.y - miny) / (maxy - miny);
 
         // Obtemos a refletância difusa do mapa diurno (TextureImage1)
-        Kd0 = texture(TextureImage0, vec2(U,V)).rgb;  
+        Kd0 = texture(TextureImage1, vec2(U,V)).rgb;  
         
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
 
         // Para o nave, usamos apenas a textura básica com iluminação
         color.rgb = Kd0 * (lambert + 0.1);
+    }    
+    else if ( object_id == SKYBOX )
+    {
+        // PREENCHA AQUI as coordenadas de textura da esfera, computadas com
+        // projeção esférica EM COORDENADAS DO MODELO. Utilize como referência
+        // o slides 134-150 do documento Aula_20_Mapeamento_de_Texturas.pdf.
+        // A esfera que define a projeção deve estar centrada na posição
+        // "bbox_center" definida abaixo.
+
+        // Você deve utilizar:
+        //   função 'length( )' : comprimento Euclidiano de um vetor
+        //   função 'atan( , )' : arcotangente. Veja https://en.wikipedia.org/wiki/Atan2.
+        //   função 'asin( )'   : seno inverso.
+        //   constante M_PI
+        //   variável position_model
+
+        vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
+
+        float px = position_model.x - bbox_center.x;
+        float py = position_model.y - bbox_center.y;
+        float pz = position_model.z - bbox_center.z;
+
+        float rho = sqrt(px * px + py * py + pz * pz);
+
+        float theta = atan(px, pz); // Longitude
+        float phi   = asin(py / rho); // Latitude
+
+        U = (theta + M_PI) / (2.0f * M_PI);
+        V = (phi + M_PI / 2.0f) / M_PI;
+        Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
     }
 
 

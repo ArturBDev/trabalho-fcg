@@ -49,7 +49,10 @@
 #include "utils.h"
 #include "matrices.h"
 
-#define AIRCRAFT 0
+#define AIRCRAFT 1
+#define SKYBOX 0
+
+#define M_PI_2 1.57079632679489661923
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -301,12 +304,17 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/textures/aircraft.jpg"); // TextureImage0
+    LoadTextureImage("../../data/textures/skybox.png"); // TextureImage0
+    LoadTextureImage("../../data/textures/aircraft.jpg"); // TextureImage1
 
 
     ObjModel aircraft_model("../../data/aircraft.obj");
     ComputeNormals(&aircraft_model);
     BuildTrianglesAndAddToVirtualScene(&aircraft_model);
+
+    ObjModel skybox_model("../../data/sphere.obj");
+    ComputeNormals(&skybox_model);
+    BuildTrianglesAndAddToVirtualScene(&skybox_model);
 
     if ( argc > 1 )
     {
@@ -404,8 +412,19 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
 
+        // Desenha Infinito ao redor da cena
+        model = Matrix_Translate(camera_position_c.x,camera_position_c.y,camera_position_c.z);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, SKYBOX);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);   
+        DrawVirtualObject("the_sphere");
+        glActiveTexture(GL_TEXTURE0); 
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+
         // Desenhamos o modelo da nave
-        model = Matrix_Scale(0.005f, 0.005f, 0.005f);
+        model =  Matrix_Rotate_Y(-M_PI_2) * Matrix_Scale(0.005f, 0.005f, 0.005f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, AIRCRAFT);
         DrawVirtualObject("the aircraft");
