@@ -66,6 +66,8 @@ void main()
     float U = 0.0;
     float V = 0.0;
 
+    vec3 Kd0;
+
     if ( object_id == AIRCRAFT){
         float minx = bbox_min.x;
         float maxx = bbox_max.x;
@@ -78,17 +80,17 @@ void main()
 
         U = (position_model.x - minx) / (maxx - minx);
         V = (position_model.y - miny) / (maxy - miny);
+
+        // Obtemos a refletância difusa do mapa diurno (TextureImage1)
+        Kd0 = texture(TextureImage0, vec2(U,V)).rgb;  
+        
+        // Equação de Iluminação
+        float lambert = max(0,dot(n,l));
+
+        // Para o avião, usamos apenas a textura básica com iluminação
+        color.rgb = Kd0 * (lambert + 0.1);
     }
 
-    // Obtemos a refletância difusa do mapa diurno (TextureImage1)
-    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;  
-
-    // Equação de Iluminação
-    float lambert = max(0,dot(n,l));
-
-    // Para o avião, usamos apenas a textura básica com iluminação
-    color.rgb = Kd0 * (lambert + 0.1);
-   
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:
