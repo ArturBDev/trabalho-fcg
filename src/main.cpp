@@ -230,6 +230,14 @@ GLint g_bbox_max_uniform;
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
 
+// Variáveis que controlam a posição da aeronave no mundo.
+float g_AircraftPositionX = 0.0f;
+float g_AircraftPositionY = 0.0f;
+float g_AircraftPositionZ = 0.0f;
+
+// Variável que controla a rotação (roll) da aeronave em torno de seu eixo de visão.
+float g_AircraftRoll = 0.0f;
+
 int main(int argc, char* argv[])
 {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -424,7 +432,10 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);
 
         // Desenhamos o modelo da nave
-        model =  Matrix_Rotate_Y(-M_PI_2) * Matrix_Scale(0.005f, 0.005f, 0.005f);
+        model =  Matrix_Translate(g_AircraftPositionX, g_AircraftPositionY, g_AircraftPositionZ)
+         * Matrix_Rotate_Z(g_AircraftRoll)
+         * Matrix_Rotate_Y(-M_PI_2) 
+         * Matrix_Scale(0.005f, 0.005f, 0.005f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, AIRCRAFT);
         DrawVirtualObject("the aircraft");
@@ -1218,32 +1229,33 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     //   Se apertar tecla Z       então g_AngleZ += delta;
     //   Se apertar tecla shift+Z então g_AngleZ -= delta;
 
-    float delta = 3.141592 / 16; // 22.5 graus, em radianos.
+    float delta_translation = 0.1f;
+    float delta_rotation = 0.05f; // Rotação para o roll
 
-    if (key == GLFW_KEY_X && action == GLFW_PRESS)
+    //Lógica de Movimentação da Aeronave 
+    if (key == GLFW_KEY_W && action == GLFW_PRESS)
     {
-        g_AngleX += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
+        g_AircraftPositionZ -= delta_translation; 
     }
-
-    if (key == GLFW_KEY_Y && action == GLFW_PRESS)
+    if (key == GLFW_KEY_S && action == GLFW_PRESS)
     {
-        g_AngleY += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
+        g_AircraftPositionZ += delta_translation;
     }
-    if (key == GLFW_KEY_Z && action == GLFW_PRESS)
+    if (key == GLFW_KEY_A && action == GLFW_PRESS)
     {
-        g_AngleZ += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
+        g_AircraftPositionX -= delta_translation;
     }
-
-    // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+    if (key == GLFW_KEY_D && action == GLFW_PRESS)
     {
-        g_AngleX = 0.0f;
-        g_AngleY = 0.0f;
-        g_AngleZ = 0.0f;
-        g_ForearmAngleX = 0.0f;
-        g_ForearmAngleZ = 0.0f;
-        g_TorsoPositionX = 0.0f;
-        g_TorsoPositionY = 0.0f;
+        g_AircraftPositionX += delta_translation;
+    }
+    if (key == GLFW_KEY_Q && action == GLFW_PRESS)
+    {
+        g_AircraftRoll += delta_rotation;
+    }
+    if (key == GLFW_KEY_E && action == GLFW_PRESS)
+    {
+        g_AircraftRoll -= delta_rotation;
     }
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
