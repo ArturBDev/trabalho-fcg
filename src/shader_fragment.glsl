@@ -121,6 +121,8 @@ void main()
         U = (theta + M_PI) / (2.0f * M_PI);
         V = (phi + M_PI / 2.0f) / M_PI;
         Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+
+        color.rgb = Kd0;
     }
 
 

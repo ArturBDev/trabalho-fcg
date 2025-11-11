@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/textures/skybox.png"); // TextureImage0
+    LoadTextureImage("../../data/textures/skybox.jpeg"); // TextureImage0
     LoadTextureImage("../../data/textures/aircraft.jpg"); // TextureImage1
 
 
