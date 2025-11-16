@@ -1,12 +1,4 @@
-# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
-# File Created: 06.10.2013 19:40:35
-
-mtllib moon.mtl
-
-#
-# object Sphere001
-#
-
+o moon
 v  0.2574 58.7078 -0.2574
 v  -0.3889 58.6788 1.4697
 v  -0.3343 58.6788 1.4892

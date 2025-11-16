@@ -49,8 +49,9 @@
 #include "utils.h"
 #include "matrices.h"
 
-#define AIRCRAFT 1
 #define SKYBOX 0
+#define AIRCRAFT 1
+#define PLANE 2
 
 #define M_PI_2 1.57079632679489661923
 
@@ -314,7 +315,7 @@ int main(int argc, char* argv[])
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/textures/skybox.jpeg"); // TextureImage0
     LoadTextureImage("../../data/textures/aircraft.jpg"); // TextureImage1
-
+    LoadTextureImage("../../data/textures/moon.jpg"); // TextureImage2
 
     ObjModel aircraft_model("../../data/aircraft.obj");
     ComputeNormals(&aircraft_model);
@@ -362,6 +363,9 @@ int main(int argc, char* argv[])
         // os shaders de vértice e fragmentos).
         glUseProgram(g_GpuProgramID);
 
+        glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
+        glm::mat4 aircraft = Matrix_Identity(); // Transformação identidade de modelagem
+
         // Computamos a posição da câmera utilizando coordenadas esféricas.  As
         // variáveis g_CameraDistance, g_CameraPhi, e g_CameraTheta são
         // controladas pelo mouse do usuário. Veja as funções CursorPosCallback()
@@ -373,7 +377,7 @@ int main(int argc, char* argv[])
 
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-        glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
+        glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f) + glm::vec4(); // Ponto "c", centro da câmera
         glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
@@ -388,7 +392,7 @@ int main(int argc, char* argv[])
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float farplane  = -60.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -411,7 +415,6 @@ int main(int argc, char* argv[])
             projection = Matrix_Orthographic(l, r, b, t, nearplane, farplane);
         }
 
-        glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
 
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
         // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
@@ -432,13 +435,20 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);
 
         // Desenhamos o modelo da nave
-        model =  Matrix_Translate(g_AircraftPositionX, g_AircraftPositionY, g_AircraftPositionZ)
+        aircraft =  Matrix_Translate(g_AircraftPositionX, g_AircraftPositionY, g_AircraftPositionZ)
          * Matrix_Rotate_Z(g_AircraftRoll)
          * Matrix_Rotate_Y(-M_PI_2) 
          * Matrix_Scale(0.005f, 0.005f, 0.005f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(aircraft));
         glUniform1i(g_object_id_uniform, AIRCRAFT);
         DrawVirtualObject("the aircraft");
+
+        // Desenhamos o plano do chão
+        model = Matrix_Translate(0.0f,-12.0f,0.0f)* Matrix_Scale(10.0f, 10.0f, 10.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, PLANE);
+        DrawVirtualObject("the_sphere");
+
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.

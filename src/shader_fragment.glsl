@@ -21,6 +21,7 @@ uniform mat4 projection;
 // Identificador que define qual objeto está sendo desenhado no momento
 #define SKYBOX 0
 #define AIRCRAFT 1
+#define PLANE 2
 
 uniform int object_id;
 
@@ -31,6 +32,7 @@ uniform vec4 bbox_max;
 // Variáveis para acesso das imagens de textura
 uniform sampler2D TextureImage0;
 uniform sampler2D TextureImage1;
+uniform sampler2D TextureImage2;
 
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
@@ -121,6 +123,25 @@ void main()
         U = (theta + M_PI) / (2.0f * M_PI);
         V = (phi + M_PI / 2.0f) / M_PI;
         Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+
+        color.rgb = Kd0;
+    }
+        else if ( object_id == PLANE )
+    {
+        vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
+
+        float px = position_model.x - bbox_center.x;
+        float py = position_model.y - bbox_center.y;
+        float pz = position_model.z - bbox_center.z;
+
+        float rho = sqrt(px * px + py * py + pz * pz);
+
+        float theta = atan(px, pz); // Longitude
+        float phi   = asin(py / rho); // Latitude
+
+        U = (theta + M_PI) / (2.0f * M_PI);
+        V = (phi + M_PI / 2.0f) / M_PI;
+        Kd0 = texture(TextureImage2, vec2(U,V)).rgb;
 
         color.rgb = Kd0;
     }
