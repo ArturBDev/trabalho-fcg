@@ -1265,20 +1265,46 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     float delta_rotation = 0.05f; // Rotação para o roll
 
     //Lógica de Movimentação da Aeronave 
-    if (key == GLFW_KEY_W && action == GLFW_PRESS)
+    if(key == GLFW_KEY_W)
     {
-        isWPressed = true; 
-    } else {
-        isWPressed = false; 
+        if (action == GLFW_PRESS)
+            // Usuário apertou a tecla W, então atualizamos o estado para pressionada
+            isWPressed = true;
+
+        else if (action == GLFW_RELEASE)
+            // Usuário largou a tecla W, então atualizamos o estado para NÃO pressionada
+            isWPressed = false;
+
+        else if (action == GLFW_REPEAT)
+            ;
     }
 
-    if (key == GLFW_KEY_A && action == GLFW_PRESS)
+    if(key == GLFW_KEY_A)
     {
-        isAPressed = true;
+        if (action == GLFW_PRESS)
+            // Usuário apertou a tecla W, então atualizamos o estado para pressionada
+            isAPressed = true;
+
+        else if (action == GLFW_RELEASE)
+            // Usuário largou a tecla W, então atualizamos o estado para NÃO pressionada
+            isAPressed = false;
+
+        else if (action == GLFW_REPEAT)
+            ;
     }
-    if (key == GLFW_KEY_D && action == GLFW_PRESS)
+
+    if(key == GLFW_KEY_D)
     {
-        isDPressed = true;
+        if (action == GLFW_PRESS)
+            // Usuário apertou a tecla W, então atualizamos o estado para pressionada
+            isDPressed = true;
+
+        else if (action == GLFW_RELEASE)
+            // Usuário largou a tecla W, então atualizamos o estado para NÃO pressionada
+            isDPressed = false;
+
+        else if (action == GLFW_REPEAT)
+            ;
     }
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
@@ -1618,6 +1644,10 @@ void moveAircraft (float tprev, float tnow, glm::vec4 aircraft_position ){
 
     if(isWPressed){
         g_AircraftPositionZ += delta_t * speed;
+    } else if (isDPressed){
+        g_AircraftPositionX -= delta_t * speed;
+    } else if (isAPressed){
+        g_AircraftPositionX += delta_t * speed;
     } 
 }
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
