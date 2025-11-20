@@ -158,6 +158,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+void moveAircraft (float tprev, float tnow, glm::vec4 aircraft_position);
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -238,6 +239,12 @@ float g_AircraftPositionZ = 0.0f;
 
 // Variável que controla a rotação (roll) da aeronave em torno de seu eixo de visão.
 float g_AircraftRoll = 0.0f;
+
+// Flags para controle de movimento 
+float isWPressed = false;
+float isAPressed = false;
+float isDPressed = false;
+
 
 int main(int argc, char* argv[])
 {
@@ -342,6 +349,9 @@ int main(int argc, char* argv[])
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
+    float tprev = glfwGetTime(); // velocidade
+    float tnow;
+
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -363,13 +373,15 @@ int main(int argc, char* argv[])
         // os shaders de vértice e fragmentos).
         glUseProgram(g_GpuProgramID);
 
+        tnow = glfwGetTime();
+
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
         glm::mat4 aircraft = Matrix_Identity(); // Transformação identidade de modelagem
 
         // Definindo o ponto de observação (Look-at) como a posição da aeronave ---
-        glm::vec4 aircraft_position_w = glm::vec4(g_AircraftPositionX, g_AircraftPositionY, g_AircraftPositionZ, 1.0f);
+        glm::vec4 aircraft_position = glm::vec4(g_AircraftPositionX, g_AircraftPositionY, g_AircraftPositionZ, 1.0f);
 
-        glm::vec4 camera_lookat_l = aircraft_position_w;
+        glm::vec4 camera_lookat_l = aircraft_position;
 
         // Calculando a posição da câmera (Follow Camera) ---
         // Usamos g_CameraTheta e g_CameraPhi para definir a posição relativa
@@ -430,7 +442,7 @@ int main(int argc, char* argv[])
 
 
         // Desenha Infinito ao redor da cena
-        model = Matrix_Translate(camera_position_c.x,camera_position_c.y,camera_position_c.z);
+        model = Matrix_Translate(camera_position_c.x,camera_position_c.y,camera_position_c.z) * Matrix_Scale(1.0f/60.0f, 1.0f/60.0f, 1.0f/60.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SKYBOX);
         glDisable(GL_DEPTH_TEST);
@@ -449,11 +461,15 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, AIRCRAFT);
         DrawVirtualObject("the aircraft");
 
-        // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,-12.0f,0.0f)* Matrix_Scale(10.0f, 10.0f, 10.0f);
+        // Desenhamos o plano do chão (lua)
+        model = Matrix_Translate(0.0f,-16.0f,0.0f) * Matrix_Scale(15.0f/60.0f, 15.0f/60.0f, 15.0f/60.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_sphere");
+
+        moveAircraft(tprev, tnow, aircraft_position);
+
+        tprev = tnow;
 
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
@@ -1251,27 +1267,18 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     //Lógica de Movimentação da Aeronave 
     if (key == GLFW_KEY_W && action == GLFW_PRESS)
     {
-        g_AircraftPositionZ += delta_translation; 
+        isWPressed = true; 
+    } else {
+        isWPressed = false; 
     }
-    if (key == GLFW_KEY_S && action == GLFW_PRESS)
-    {
-        g_AircraftPositionZ -= delta_translation;
-    }
+
     if (key == GLFW_KEY_A && action == GLFW_PRESS)
     {
-        g_AircraftPositionX -= delta_translation;
+        isAPressed = true;
     }
     if (key == GLFW_KEY_D && action == GLFW_PRESS)
     {
-        g_AircraftPositionX += delta_translation;
-    }
-    if (key == GLFW_KEY_Q && action == GLFW_PRESS)
-    {
-        g_AircraftRoll += delta_rotation;
-    }
-    if (key == GLFW_KEY_E && action == GLFW_PRESS)
-    {
-        g_AircraftRoll -= delta_rotation;
+        isDPressed = true;
     }
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
@@ -1604,6 +1611,15 @@ void PrintObjModelInfo(ObjModel* model)
   }
 }
 
+void moveAircraft (float tprev, float tnow, glm::vec4 aircraft_position ){
+    float delta_t = tnow - tprev;
+
+    float speed = 3.0f;
+
+    if(isWPressed){
+        g_AircraftPositionZ += delta_t * speed;
+    } 
+}
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
 // vim: set spell spelllang=pt_br :
 
