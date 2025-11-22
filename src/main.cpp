@@ -233,9 +233,7 @@ GLint g_bbox_max_uniform;
 GLuint g_NumLoadedTextures = 0;
 
 // Variáveis que controlam a posição da aeronave no mundo.
-float g_AircraftPositionX = 0.0f;
-float g_AircraftPositionY = 0.0f;
-float g_AircraftPositionZ = 0.0f;
+glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 16.0f, 0.0f, 1.0f);
 
 // Variável que controla a rotação (roll) da aeronave em torno de seu eixo de visão.
 float g_AircraftRoll = 0.0f;
@@ -244,6 +242,9 @@ float g_AircraftRoll = 0.0f;
 float isWPressed = false;
 float isAPressed = false;
 float isDPressed = false;
+
+// Variaveis de posição da lua
+glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 
 int main(int argc, char* argv[])
@@ -379,7 +380,7 @@ int main(int argc, char* argv[])
         glm::mat4 aircraft = Matrix_Identity(); // Transformação identidade de modelagem
 
         // Definindo o ponto de observação (Look-at) como a posição da aeronave ---
-        glm::vec4 aircraft_position = glm::vec4(g_AircraftPositionX, g_AircraftPositionY, g_AircraftPositionZ, 1.0f);
+        glm::vec4 aircraft_position = glm::vec4(g_AircraftPosition.x, g_AircraftPosition.y, g_AircraftPosition.z, 1.0f);
 
         glm::vec4 camera_lookat_l = aircraft_position;
 
@@ -453,7 +454,7 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);
 
         // Desenhamos o modelo da nave
-        aircraft =  Matrix_Translate(g_AircraftPositionX, g_AircraftPositionY, g_AircraftPositionZ)
+        aircraft =  Matrix_Translate(g_AircraftPosition.x, g_AircraftPosition.y, g_AircraftPosition.z)
          * Matrix_Rotate_Z(g_AircraftRoll)
          * Matrix_Rotate_Y(M_PI_2) 
          * Matrix_Scale(0.005f, 0.005f, 0.005f);
@@ -462,7 +463,7 @@ int main(int argc, char* argv[])
         DrawVirtualObject("the aircraft");
 
         // Desenhamos o plano do chão (lua)
-        model = Matrix_Translate(0.0f,-16.0f,0.0f) * Matrix_Scale(15.0f/60.0f, 15.0f/60.0f, 15.0f/60.0f);
+        model = Matrix_Translate(moon_position.x, moon_position.y, moon_position.z) * Matrix_Scale(15.0f/60.0f, 15.0f/60.0f, 15.0f/60.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_sphere");
@@ -1643,11 +1644,11 @@ void moveAircraft (float tprev, float tnow, glm::vec4 aircraft_position ){
     float speed = 3.0f;
 
     if(isWPressed){
-        g_AircraftPositionZ += delta_t * speed;
+        g_AircraftPosition.z += delta_t * speed;
     } else if (isDPressed){
-        g_AircraftPositionX -= delta_t * speed;
+        g_AircraftPosition.x -= delta_t * speed;
     } else if (isAPressed){
-        g_AircraftPositionX += delta_t * speed;
+        g_AircraftPosition.x += delta_t * speed;
     } 
 }
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
