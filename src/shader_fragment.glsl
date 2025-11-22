@@ -73,19 +73,9 @@ void main()
     vec3 Kd0;
 
     if ( object_id == AIRCRAFT){
-        float minx = bbox_min.x;
-        float maxx = bbox_max.x;
+        U = texcoords.x;
+        V = texcoords.y; 
 
-        float miny = bbox_min.y;
-        float maxy = bbox_max.y;
-
-        float minz = bbox_min.z;
-        float maxz = bbox_max.z;
-
-        U = (position_model.x - minx) / (maxx - minx);
-        V = (position_model.y - miny) / (maxy - miny);
-
-        // Obtemos a refletância difusa do mapa diurno (TextureImage1)
         Kd0 = texture(TextureImage1, vec2(U,V)).rgb;  
         
         // Equação de Iluminação

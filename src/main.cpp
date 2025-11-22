@@ -456,8 +456,7 @@ int main(int argc, char* argv[])
         // Desenhamos o modelo da nave
         aircraft =  Matrix_Translate(g_AircraftPosition.x, g_AircraftPosition.y, g_AircraftPosition.z)
          * Matrix_Rotate_Z(g_AircraftRoll)
-         * Matrix_Rotate_Y(M_PI_2) 
-         * Matrix_Scale(0.005f, 0.005f, 0.005f);
+         * Matrix_Scale(0.05f, 0.05f, 0.05f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(aircraft));
         glUniform1i(g_object_id_uniform, AIRCRAFT);
         DrawVirtualObject("the aircraft");
