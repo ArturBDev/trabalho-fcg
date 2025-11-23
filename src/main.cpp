@@ -1688,18 +1688,20 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
 
         glm::vec4 fwd4 = glm::vec4(g_AircraftForward, 0.0f);
         g_AircraftForward = glm::normalize(glm::vec3(rotMatrix * fwd4));
+
+        
+        if (isAPressed || isDPressed) {
+            float angle = turn_speed * delta_t;
+            if (isDPressed) angle = -angle; // Inverte para Direita
+
+            // Rotação em torno do eixo UP (Normal da lua)
+            glm::mat4 rotMatrix = Matrix_Rotate(angle, glm::vec4(up_vec, 0.0f));
+
+            glm::vec4 fwd4 = glm::vec4(g_AircraftForward, 0.0f);
+            g_AircraftForward = glm::normalize(glm::vec3(rotMatrix * fwd4));
+        }
     }
 
-    if (isAPressed || isDPressed) {
-        float angle = turn_speed * delta_t;
-        if (isDPressed) angle = -angle; // Inverte para Direita
-
-        // Rotação em torno do eixo UP (Normal da lua)
-        glm::mat4 rotMatrix = Matrix_Rotate(angle, glm::vec4(up_vec, 0.0f));
-
-        glm::vec4 fwd4 = glm::vec4(g_AircraftForward, 0.0f);
-        g_AircraftForward = glm::normalize(glm::vec3(rotMatrix * fwd4));
-    }
 
     aircraft_position = glm::vec4(currentPos, 1.0f);
     
