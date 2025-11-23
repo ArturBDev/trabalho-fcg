@@ -22,6 +22,9 @@ uniform mat4 projection;
 #define SKYBOX 0
 #define AIRCRAFT 1
 #define PLANE 2
+#define ENEMY1 3
+#define ENEMY2 4
+#define ENEMY3 5
 
 uniform int object_id;
 
@@ -92,12 +95,21 @@ void main()
 
         color.rgb = Kd0;
     }
-        else if ( object_id == PLANE )
+    else if ( object_id == PLANE )
     {
         U = texcoords.x;
         V = texcoords.y; 
 
         Kd0 = texture(TextureImage2, vec2(U,V)).rgb;
+
+        color.rgb = Kd0;
+    }
+    else if ( object_id == ENEMY1 || object_id == ENEMY2 || object_id == ENEMY3 )
+    {
+        U = texcoords.x;
+        V = texcoords.y; 
+
+        Kd0 = texture(TextureImage1, vec2(U,V)).rgb;
 
         color.rgb = Kd0;
     }

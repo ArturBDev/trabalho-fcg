@@ -52,6 +52,9 @@
 #define SKYBOX 0
 #define AIRCRAFT 1
 #define PLANE 2
+#define ENEMY1 3
+#define ENEMY2 4
+#define ENEMY3 5
 
 #define M_PI_2 1.57079632679489661923
 
@@ -236,8 +239,8 @@ GLuint g_NumLoadedTextures = 0;
 glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 16.0f, 0.0f, 1.0f);
 glm::vec3 g_AircraftForward = glm::vec3(0.0f, 0.0f, 1.0f); 
 
-// Variável que controla a rotação (roll) da aeronave em torno de seu eixo de visão.
-float g_AircraftRoll = 0.0f;
+// Variavel que controlam a posicao do inimigo 1
+glm::vec4 g_EnemyPosition = glm::vec4(0.0f, -16.0f, 0.0f, 1.0f);
 
 // Flags para controle de movimento 
 float isWPressed = false;
@@ -473,10 +476,81 @@ int main(int argc, char* argv[])
         // Desenhamos o modelo da nave
         aircraft =  Matrix_Translate(g_AircraftPosition.x, g_AircraftPosition.y, g_AircraftPosition.z)
          * rotation_align
-         * Matrix_Rotate_Z(g_AircraftRoll)
-         * Matrix_Scale(0.05f, 0.05f, 0.05f);
+         * Matrix_Scale(0.05f, 0.05f, 0.05f)
+         * Matrix_Rotate_Y(M_PI_2 * 2);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(aircraft));
         glUniform1i(g_object_id_uniform, AIRCRAFT);
+
+        // desenha todas as peças do objeto aircraft
+        for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
+        {
+            const char* shapeName = aircraft_model.shapes[i].name.c_str();
+            
+            DrawVirtualObject(shapeName);
+        }
+
+        // Desenhamos o modelo DO inimigo 1 
+        glm::vec3 enemy1_pos = glm::vec3(g_EnemyPosition.x, g_EnemyPosition.y, g_EnemyPosition.z);
+        glm::vec3 up_e = glm::normalize(enemy1_pos - center);
+        // vetor frontal de referência (mundo). Projetamos na tangente em relação à lua
+        glm::vec3 ref_front = glm::vec3(0.0f, 0.0f, 1.0f);
+        glm::vec3 front_e = glm::normalize(ref_front - glm::dot(ref_front, up_e) * up_e);
+        glm::vec3 right_e = glm::normalize(glm::cross(up_e, front_e));
+
+        glm::mat4 rotation_align_enemy = glm::mat4(1.0f);
+        rotation_align_enemy[0] = glm::vec4(right_e, 0.0f);
+        rotation_align_enemy[1] = glm::vec4(up_e, 0.0f);
+        rotation_align_enemy[2] = glm::vec4(front_e, 0.0f);
+
+        model = Matrix_Translate(enemy1_pos.x, enemy1_pos.y, enemy1_pos.z)
+                * rotation_align_enemy
+                * Matrix_Scale(0.05f, 0.05f, 0.05f)
+                * Matrix_Rotate_Y(M_PI_2 * 2);
+
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, ENEMY1);
+
+        // desenha todas as peças do objeto aircraft
+        for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
+        {
+            const char* shapeName = aircraft_model.shapes[i].name.c_str();
+            
+            DrawVirtualObject(shapeName);
+        }
+
+        // Desenhamos o modelo do inimigo 2 
+        glm::vec3 enemy2_pos = glm::vec3(g_EnemyPosition.x + 5.0f, g_EnemyPosition.y, g_EnemyPosition.z);
+        rotation_align_enemy[0] = glm::vec4(right_e, 0.0f);
+        rotation_align_enemy[1] = glm::vec4(up_e, 0.0f);
+        rotation_align_enemy[2] = glm::vec4(front_e, 0.0f);
+
+        model = Matrix_Translate(enemy2_pos.x, enemy2_pos.y, enemy2_pos.z)
+                * rotation_align_enemy
+                * Matrix_Scale(0.05f, 0.05f, 0.05f)
+                * Matrix_Rotate_Y(M_PI_2 * 2);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, ENEMY2);
+
+        // desenha todas as peças do objeto aircraft
+        for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
+        {
+            const char* shapeName = aircraft_model.shapes[i].name.c_str();
+            
+            DrawVirtualObject(shapeName);
+        }
+
+        // Desenhamos o modelo do inimigo 3 
+        glm::vec3 enemy3_pos = glm::vec3(g_EnemyPosition.x - 5.0f, g_EnemyPosition.y, g_EnemyPosition.z);
+        rotation_align_enemy[0] = glm::vec4(right_e, 0.0f);
+        rotation_align_enemy[1] = glm::vec4(up_e, 0.0f);
+        rotation_align_enemy[2] = glm::vec4(front_e, 0.0f);
+
+        model = Matrix_Translate(enemy3_pos.x, enemy3_pos.y, enemy3_pos.z)
+                * rotation_align_enemy
+                * Matrix_Scale(0.05f, 0.05f, 0.05f)
+                * Matrix_Rotate_Y(M_PI_2 * 2);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, ENEMY3);
 
         // desenha todas as peças do objeto aircraft
         for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
@@ -662,6 +736,8 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
+
     glUseProgram(0);
 }
 
