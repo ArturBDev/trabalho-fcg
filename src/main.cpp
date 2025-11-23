@@ -158,7 +158,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-void moveAircraft (float tprev, float tnow, glm::vec4 aircraft_position);
+void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position);
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -234,6 +234,7 @@ GLuint g_NumLoadedTextures = 0;
 
 // Variáveis que controlam a posição da aeronave no mundo.
 glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 16.0f, 0.0f, 1.0f);
+glm::vec3 g_AircraftForward = glm::vec3(0.0f, 0.0f, 1.0f); 
 
 // Variável que controla a rotação (roll) da aeronave em torno de seu eixo de visão.
 float g_AircraftRoll = 0.0f;
@@ -379,25 +380,18 @@ int main(int argc, char* argv[])
         glm::mat4 model = Matrix_Identity(); 
         glm::mat4 aircraft = Matrix_Identity(); 
         
-        // Posição da nave e da lua
         glm::vec3 ship_pos = glm::vec3(g_AircraftPosition);
         glm::vec3 center   = glm::vec3(moon_position);
 
-        // Vetor UP (Normal da superfície da Lua na posição da nave)
         glm::vec3 up_vec = glm::normalize(ship_pos - center);
 
-        // Vetor FRONT (Tangente à esfera, apontando para o Norte/Sul relativo)
-        glm::vec3 ref_front = glm::vec3(0.0f, 0.0f, 1.0f);
-        if (glm::abs(glm::dot(up_vec, ref_front)) > 0.99f) {
-            ref_front = glm::vec3(1.0f, 0.0f, 0.0f); // Evita singularidade nos polos
-        }
+        glm::vec3 front_vec = glm::normalize(g_AircraftForward - glm::dot(g_AircraftForward, up_vec) * up_vec);
         
-        // Vetor RIGHT (Produto vetorial para achar a lateral)
-        glm::vec3 right_vec = glm::normalize(glm::cross(ref_front, up_vec));
-        
-        // Recalcula FRONT para garantir ortogonalidade perfeita
-        glm::vec3 front_vec = glm::normalize(glm::cross(right_vec, up_vec));
-        
+        // Atualizamos a global para evitar drift 
+        g_AircraftForward = front_vec; 
+
+        glm::vec3 right_vec = glm::normalize(glm::cross(up_vec, front_vec));  
+
         // O ponto para onde a câmera olha (LookAt) é a própria nave
         glm::vec4 camera_lookat_l = g_AircraftPosition;
 
@@ -487,11 +481,9 @@ int main(int argc, char* argv[])
         // desenha todas as peças do objeto aircraft
         for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
         {
-            // Pegamos o nome da peça atual (ex: "Asa", "Corpo", "Roda")
-            const char* nome_peca = aircraft_model.shapes[i].name.c_str();
+            const char* shapeName = aircraft_model.shapes[i].name.c_str();
             
-            // Desenhamos essa peça específica
-            DrawVirtualObject(nome_peca);
+            DrawVirtualObject(shapeName);
         }
 
         // Desenhamos o plano do chão (lua)
@@ -503,7 +495,6 @@ int main(int argc, char* argv[])
         moveAircraft(tprev, tnow, g_AircraftPosition);
 
         tprev = tnow;
-
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
@@ -1670,34 +1661,48 @@ void PrintObjModelInfo(ObjModel* model)
   }
 }
 
-void moveAircraft (float tprev, float tnow, glm::vec4 aircraft_position ){
+void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
     float delta_t = tnow - tprev;
+    float speed = 8.0f;         
+    float turn_speed = 2.0f;   
+    float fixedDistance = 16.0f; 
 
-    float speed = 3.0f;
+    glm::vec3 center = glm::vec3(moon_position);
+    glm::vec3 currentPos = glm::vec3(aircraft_position);
 
-    if(isWPressed){
-        g_AircraftPosition.z -= delta_t * speed;
-    } else if (isDPressed){
-        g_AircraftPosition.x -= delta_t * speed;
-    } else if (isAPressed){
-        g_AircraftPosition.x += delta_t * speed;
-    } 
+    glm::vec3 up_vec = glm::normalize(currentPos - center);
 
-    glm::vec3 center = glm::vec3(moon_position); 
-    glm::vec3 currentPos = glm::vec3(g_AircraftPosition);
+    g_AircraftForward = glm::normalize(g_AircraftForward - glm::dot(g_AircraftForward, up_vec) * up_vec);
 
-    //Calcular o vetor do centro até a nave
-    glm::vec3 direction = currentPos - center;
+    glm::vec3 right_vec = glm::normalize(glm::cross(up_vec, g_AircraftForward));
+    
+    if (isWPressed) {
+        float angle = speed * delta_t * 0.05f; 
 
-    float fixedDistance = 16.0f;
 
-    if (glm::length(direction) > 0.0f) { 
-        direction = glm::normalize(direction);
-        glm::vec3 newPos = center + (direction * fixedDistance);
+        glm::mat4 rotMatrix = Matrix_Rotate(angle, glm::vec4(right_vec, 0.0f));
 
-        g_AircraftPosition.x = newPos.x;
-        g_AircraftPosition.y = newPos.y;
-        g_AircraftPosition.z = newPos.z;
+        glm::vec4 relativePosition = glm::vec4(currentPos - center, 1.0f);
+        relativePosition = rotMatrix * relativePosition;
+        currentPos = center + glm::vec3(relativePosition);
+
+        glm::vec4 fwd4 = glm::vec4(g_AircraftForward, 0.0f);
+        g_AircraftForward = glm::normalize(glm::vec3(rotMatrix * fwd4));
     }
-}
 
+    if (isAPressed || isDPressed) {
+        float angle = turn_speed * delta_t;
+        if (isDPressed) angle = -angle; // Inverte para Direita
+
+        // Rotação em torno do eixo UP (Normal da lua)
+        glm::mat4 rotMatrix = Matrix_Rotate(angle, glm::vec4(up_vec, 0.0f));
+
+        glm::vec4 fwd4 = glm::vec4(g_AircraftForward, 0.0f);
+        g_AircraftForward = glm::normalize(glm::vec3(rotMatrix * fwd4));
+    }
+
+    aircraft_position = glm::vec4(currentPos, 1.0f);
+    
+    glm::vec3 finalDir = glm::normalize(glm::vec3(aircraft_position) - center);
+    aircraft_position = glm::vec4(center + (finalDir * fixedDistance), 1.0f);
+}
