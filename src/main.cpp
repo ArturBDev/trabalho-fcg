@@ -483,7 +483,16 @@ int main(int argc, char* argv[])
          * Matrix_Scale(0.05f, 0.05f, 0.05f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(aircraft));
         glUniform1i(g_object_id_uniform, AIRCRAFT);
-        DrawVirtualObject("the aircraft");
+
+        // desenha todas as peças do objeto aircraft
+        for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
+        {
+            // Pegamos o nome da peça atual (ex: "Asa", "Corpo", "Roda")
+            const char* nome_peca = aircraft_model.shapes[i].name.c_str();
+            
+            // Desenhamos essa peça específica
+            DrawVirtualObject(nome_peca);
+        }
 
         // Desenhamos o plano do chão (lua)
         model = Matrix_Translate(moon_position.x, moon_position.y, moon_position.z) * Matrix_Scale(15.0f/60.0f, 15.0f/60.0f, 15.0f/60.0f);
