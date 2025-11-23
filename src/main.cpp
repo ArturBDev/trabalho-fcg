@@ -58,6 +58,14 @@
 
 #define M_PI_2 1.57079632679489661923
 
+struct Enemy {
+    int id;                 // ID para o shader (ENEMY1, ENEMY2, etc)
+    glm::vec4 position;     // Posição no mundo
+    glm::vec3 forward;      // Para onde ele está olhando/indo
+    float speed;            // Velocidade de movimento
+    float changeDirTimer;   // Tempo até a próxima mudança de direção aleatória
+};
+
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
 struct ObjModel
@@ -162,6 +170,9 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position);
+float randomFloat(float min, float max);
+void InitEnemies();
+void moveEnemies(float tprev, float tnow);
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -239,8 +250,8 @@ GLuint g_NumLoadedTextures = 0;
 glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 16.0f, 0.0f, 1.0f);
 glm::vec3 g_AircraftForward = glm::vec3(0.0f, 0.0f, 1.0f); 
 
-// Variavel que controlam a posicao do inimigo 1
-glm::vec4 g_EnemyPosition = glm::vec4(0.0f, -16.0f, 0.0f, 1.0f);
+// Lista global de inimigos
+std::vector<Enemy> g_Enemies;
 
 // Flags para controle de movimento 
 float isWPressed = false;
@@ -356,6 +367,9 @@ int main(int argc, char* argv[])
 
     float tprev = glfwGetTime(); // velocidade
     float tnow;
+    
+    // Inicializa inimigos 
+    InitEnemies();
 
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
@@ -489,75 +503,31 @@ int main(int argc, char* argv[])
             DrawVirtualObject(shapeName);
         }
 
-        // Desenhamos o modelo DO inimigo 1 
-        glm::vec3 enemy1_pos = glm::vec3(g_EnemyPosition.x, g_EnemyPosition.y, g_EnemyPosition.z);
-        glm::vec3 up_e = glm::normalize(enemy1_pos - center);
-        // vetor frontal de referência (mundo). Projetamos na tangente em relação à lua
-        glm::vec3 ref_front = glm::vec3(0.0f, 0.0f, 1.0f);
-        glm::vec3 front_e = glm::normalize(ref_front - glm::dot(ref_front, up_e) * up_e);
-        glm::vec3 right_e = glm::normalize(glm::cross(up_e, front_e));
+        // Loop para desenhar TODOS os inimigos
+        for (const auto &enemy : g_Enemies) {
+            glm::vec3 enemy_pos = glm::vec3(enemy.position);
+            glm::vec3 up_e = glm::normalize(enemy_pos - center);
+            glm::vec3 front_e = enemy.forward;
+            glm::vec3 right_e = glm::normalize(glm::cross(up_e, front_e));
 
-        glm::mat4 rotation_align_enemy = glm::mat4(1.0f);
-        rotation_align_enemy[0] = glm::vec4(right_e, 0.0f);
-        rotation_align_enemy[1] = glm::vec4(up_e, 0.0f);
-        rotation_align_enemy[2] = glm::vec4(front_e, 0.0f);
+            // Matriz de alinhamento (LookAt inverso) para o modelo virar corretamente
+            glm::mat4 rotation_align_enemy = glm::mat4(1.0f);
+            rotation_align_enemy[0] = glm::vec4(right_e, 0.0f);
+            rotation_align_enemy[1] = glm::vec4(up_e, 0.0f);
+            rotation_align_enemy[2] = glm::vec4(front_e, 0.0f);
 
-        model = Matrix_Translate(enemy1_pos.x, enemy1_pos.y, enemy1_pos.z)
-                * rotation_align_enemy
-                * Matrix_Scale(0.05f, 0.05f, 0.05f)
-                * Matrix_Rotate_Y(M_PI_2 * 2);
+            model = Matrix_Translate(enemy_pos.x, enemy_pos.y, enemy_pos.z)
+                    * rotation_align_enemy
+                    * Matrix_Scale(0.05f, 0.05f, 0.05f)
+                    * Matrix_Rotate_Y(M_PI_2 * 2); 
 
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, ENEMY1);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, enemy.id); // Usa o ID guardado na struct
 
-        // desenha todas as peças do objeto aircraft
-        for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
-        {
-            const char* shapeName = aircraft_model.shapes[i].name.c_str();
-            
-            DrawVirtualObject(shapeName);
-        }
-
-        // Desenhamos o modelo do inimigo 2 
-        glm::vec3 enemy2_pos = glm::vec3(g_EnemyPosition.x + 5.0f, g_EnemyPosition.y, g_EnemyPosition.z);
-        rotation_align_enemy[0] = glm::vec4(right_e, 0.0f);
-        rotation_align_enemy[1] = glm::vec4(up_e, 0.0f);
-        rotation_align_enemy[2] = glm::vec4(front_e, 0.0f);
-
-        model = Matrix_Translate(enemy2_pos.x, enemy2_pos.y, enemy2_pos.z)
-                * rotation_align_enemy
-                * Matrix_Scale(0.05f, 0.05f, 0.05f)
-                * Matrix_Rotate_Y(M_PI_2 * 2);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, ENEMY2);
-
-        // desenha todas as peças do objeto aircraft
-        for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
-        {
-            const char* shapeName = aircraft_model.shapes[i].name.c_str();
-            
-            DrawVirtualObject(shapeName);
-        }
-
-        // Desenhamos o modelo do inimigo 3 
-        glm::vec3 enemy3_pos = glm::vec3(g_EnemyPosition.x - 5.0f, g_EnemyPosition.y, g_EnemyPosition.z);
-        rotation_align_enemy[0] = glm::vec4(right_e, 0.0f);
-        rotation_align_enemy[1] = glm::vec4(up_e, 0.0f);
-        rotation_align_enemy[2] = glm::vec4(front_e, 0.0f);
-
-        model = Matrix_Translate(enemy3_pos.x, enemy3_pos.y, enemy3_pos.z)
-                * rotation_align_enemy
-                * Matrix_Scale(0.05f, 0.05f, 0.05f)
-                * Matrix_Rotate_Y(M_PI_2 * 2);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, ENEMY3);
-
-        // desenha todas as peças do objeto aircraft
-        for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
-        {
-            const char* shapeName = aircraft_model.shapes[i].name.c_str();
-            
-            DrawVirtualObject(shapeName);
+            // Desenha o modelo 
+            for (size_t i = 0; i < aircraft_model.shapes.size(); i++) {
+                DrawVirtualObject(aircraft_model.shapes[i].name.c_str());
+            }
         }
 
         // Desenhamos o plano do chão (lua)
@@ -567,6 +537,7 @@ int main(int argc, char* argv[])
         DrawVirtualObject("the_sphere");
 
         moveAircraft(tprev, tnow, g_AircraftPosition);
+        moveEnemies(tprev, tnow); 
 
         tprev = tnow;
 
@@ -1783,4 +1754,73 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
     
     glm::vec3 finalDir = glm::normalize(glm::vec3(aircraft_position) - center);
     aircraft_position = glm::vec4(center + (finalDir * fixedDistance), 1.0f);
+}
+
+// Função auxiliar para gerar float aleatório entre min e max
+float randomFloat(float min, float max) {
+    return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
+}
+
+void InitEnemies() {
+    int ids[] = { ENEMY1, ENEMY2, ENEMY3 };
+    
+    for(int i = 0; i < 3; i++) {
+        Enemy e;
+        e.id = ids[i];
+        
+        // Posição aleatória na esfera 
+        glm::vec3 randomPos = glm::vec3(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f));
+        randomPos = glm::normalize(randomPos) * 16.0f; 
+        
+        e.position = glm::vec4(randomPos + glm::vec3(moon_position), 1.0f);
+        
+        glm::vec3 up = glm::normalize(glm::vec3(e.position) - glm::vec3(moon_position));
+        glm::vec3 randomDir = glm::vec3(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f));
+        
+        e.forward = glm::normalize(randomDir - glm::dot(randomDir, up) * up);
+        
+        e.speed = 5.0f;
+        e.changeDirTimer = randomFloat(1.0f, 3.0f); // Muda direção a cada 1 a 3 segundos
+        
+        g_Enemies.push_back(e);
+    }
+}
+
+void moveEnemies(float tprev, float tnow) {
+    float delta_t = tnow - tprev;
+    glm::vec3 center = glm::vec3(moon_position);
+    float fixedDistance = 16.0f; 
+
+    for (auto &enemy : g_Enemies) {
+        glm::vec3 currentPos = glm::vec3(enemy.position);
+        glm::vec3 up_vec = glm::normalize(currentPos - center);
+        
+        // Garante que o forward é tangente à superfície (corrige drift)
+        enemy.forward = glm::normalize(enemy.forward - glm::dot(enemy.forward, up_vec) * up_vec);
+        
+        glm::vec3 right_vec = glm::normalize(glm::cross(up_vec, enemy.forward));
+
+        enemy.changeDirTimer -= delta_t;
+        if (enemy.changeDirTimer <= 0.0f) {
+            float turnAngle = randomFloat(-1.5f, 1.5f); // Curva aleatória entre esq e dir
+            
+            // Rotaciona o vetor Forward ao redor do eixo UP (Normal da lua)
+            glm::mat4 turnMatrix = Matrix_Rotate(turnAngle, glm::vec4(up_vec, 0.0f));
+            enemy.forward = glm::normalize(glm::vec3(turnMatrix * glm::vec4(enemy.forward, 0.0f)));
+
+            // Reseta o timer para a próxima mudança
+            enemy.changeDirTimer = randomFloat(0.5f, 4.0f);
+        }
+
+        float angle = enemy.speed * delta_t * 0.05f; 
+        glm::mat4 moveMatrix = Matrix_Rotate(angle, glm::vec4(right_vec, 0.0f));
+
+        glm::vec4 relativePosition = glm::vec4(currentPos - center, 1.0f);
+        relativePosition = moveMatrix * relativePosition;
+        
+        enemy.forward = glm::normalize(glm::vec3(moveMatrix * glm::vec4(enemy.forward, 0.0f)));
+
+        glm::vec3 finalDir = glm::normalize(glm::vec3(relativePosition));
+        enemy.position = glm::vec4(center + (finalDir * fixedDistance), 1.0f);
+    }
 }
