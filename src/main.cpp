@@ -376,35 +376,52 @@ int main(int argc, char* argv[])
 
         tnow = glfwGetTime();
 
-        glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
-        glm::mat4 aircraft = Matrix_Identity(); // Transformação identidade de modelagem
+        glm::mat4 model = Matrix_Identity(); 
+        glm::mat4 aircraft = Matrix_Identity(); 
+        
+        // Posição da nave e da lua
+        glm::vec3 ship_pos = glm::vec3(g_AircraftPosition);
+        glm::vec3 center   = glm::vec3(moon_position);
 
-        // Definindo o ponto de observação (Look-at) como a posição da aeronave ---
-        glm::vec4 aircraft_position = glm::vec4(g_AircraftPosition.x, g_AircraftPosition.y, g_AircraftPosition.z, 1.0f);
+        // Vetor UP (Normal da superfície da Lua na posição da nave)
+        glm::vec3 up_vec = glm::normalize(ship_pos - center);
 
-        glm::vec4 camera_lookat_l = aircraft_position;
+        // Vetor FRONT (Tangente à esfera, apontando para o Norte/Sul relativo)
+        glm::vec3 ref_front = glm::vec3(0.0f, 0.0f, 1.0f);
+        if (glm::abs(glm::dot(up_vec, ref_front)) > 0.99f) {
+            ref_front = glm::vec3(1.0f, 0.0f, 0.0f); // Evita singularidade nos polos
+        }
+        
+        // Vetor RIGHT (Produto vetorial para achar a lateral)
+        glm::vec3 right_vec = glm::normalize(glm::cross(ref_front, up_vec));
+        
+        // Recalcula FRONT para garantir ortogonalidade perfeita
+        glm::vec3 front_vec = glm::normalize(glm::cross(right_vec, up_vec));
+        
+        // O ponto para onde a câmera olha (LookAt) é a própria nave
+        glm::vec4 camera_lookat_l = g_AircraftPosition;
 
-        // Calculando a posição da câmera (Follow Camera) ---
-        // Usamos g_CameraTheta e g_CameraPhi para definir a posição relativa
-        // da câmera em torno da aeronave .
+        // Calculamos o deslocamento local baseado no mouse (Theta/Phi) e Distância
         float r = g_CameraDistance;
-        float y_offset = r*sin(g_CameraPhi); // Altura em relação à aeronave
-        float x_offset = r*cos(g_CameraPhi)*sin(g_CameraTheta);
-        float z_offset = r*cos(g_CameraPhi)*cos(g_CameraTheta);
+        float offset_y_local = r * sin(g_CameraPhi);                  // Altura relativa à nave
+        float offset_x_local = r * cos(g_CameraPhi) * sin(g_CameraTheta); // Lado relativo
+        float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
 
-        // Vetor de deslocamento no espaço do mundo.
-        // O valor padrão de g_CameraTheta=0.0 e g_CameraPhi=0.0 resultará na câmera atrás.
-        glm::vec4 offset_vector = glm::vec4(x_offset, y_offset, z_offset, 0.0f);
+        // usando os vetores da nave (Right, Up, Front) como base.
+        glm::vec3 final_offset = (right_vec * offset_x_local) + 
+                                 (up_vec    * offset_y_local) + 
+                                 (front_vec * offset_z_local);
 
-        // A posição da câmera é o ponto de observação menos o vetor de offset
-        glm::vec4 camera_position_c  = camera_lookat_l - offset_vector;
+        // A posição da câmera é: Posição da Nave - Deslocamento Calculado
+        glm::vec4 camera_position_c = camera_lookat_l - glm::vec4(final_offset, 0.0f);
 
-        // O vetor view aponta de 'c' para 'l'
+        // O vetor "Cima" da câmera agora deve ser a normal da Lua, não o Y global (0,1,0)
+        glm::vec4 camera_up_vector = glm::vec4(up_vec, 0.0f);
+
+        // Gera a matriz View
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c;
-
-        glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f);
-        // Computamos a matriz "View" com os novos vetores.
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
+
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
@@ -453,8 +470,15 @@ int main(int argc, char* argv[])
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
 
+
+        glm::mat4 rotation_align = glm::mat4(1.0f);
+        rotation_align[0] = glm::vec4(right_vec, 0.0f); // Coluna 0: Eixo X (Right)
+        rotation_align[1] = glm::vec4(up_vec, 0.0f);    // Coluna 1: Eixo Y (Up)
+        rotation_align[2] = glm::vec4(front_vec, 0.0f); // Coluna 2: Eixo Z (Front)
+
         // Desenhamos o modelo da nave
         aircraft =  Matrix_Translate(g_AircraftPosition.x, g_AircraftPosition.y, g_AircraftPosition.z)
+         * rotation_align
          * Matrix_Rotate_Z(g_AircraftRoll)
          * Matrix_Scale(0.05f, 0.05f, 0.05f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(aircraft));
@@ -467,7 +491,7 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_sphere");
 
-        moveAircraft(tprev, tnow, aircraft_position);
+        moveAircraft(tprev, tnow, g_AircraftPosition);
 
         tprev = tnow;
 
@@ -1643,13 +1667,28 @@ void moveAircraft (float tprev, float tnow, glm::vec4 aircraft_position ){
     float speed = 3.0f;
 
     if(isWPressed){
-        g_AircraftPosition.z += delta_t * speed;
+        g_AircraftPosition.z -= delta_t * speed;
     } else if (isDPressed){
         g_AircraftPosition.x -= delta_t * speed;
     } else if (isAPressed){
         g_AircraftPosition.x += delta_t * speed;
     } 
+
+    glm::vec3 center = glm::vec3(moon_position); 
+    glm::vec3 currentPos = glm::vec3(g_AircraftPosition);
+
+    //Calcular o vetor do centro até a nave
+    glm::vec3 direction = currentPos - center;
+
+    float fixedDistance = 16.0f;
+
+    if (glm::length(direction) > 0.0f) { 
+        direction = glm::normalize(direction);
+        glm::vec3 newPos = center + (direction * fixedDistance);
+
+        g_AircraftPosition.x = newPos.x;
+        g_AircraftPosition.y = newPos.y;
+        g_AircraftPosition.z = newPos.z;
+    }
 }
-// set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
-// vim: set spell spelllang=pt_br :
 
