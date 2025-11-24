@@ -57,14 +57,7 @@
 #define ENEMY3 5
 
 #define M_PI_2 1.57079632679489661923
-
-struct Enemy {
-    int id;                 // ID para o shader (ENEMY1, ENEMY2, etc)
-    glm::vec4 position;     // Posição no mundo
-    glm::vec3 forward;      // Para onde ele está olhando/indo
-    float speed;            // Velocidade de movimento
-    float changeDirTimer;   // Tempo até a próxima mudança de direção aleatória
-};
+#define M_PI 3.14159265358979323846
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -173,6 +166,11 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position);
 float randomFloat(float min, float max);
 void InitEnemies();
 void moveEnemies(float tprev, float tnow);
+void Shoot();
+glm::vec3 evaluateBezier(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t);
+glm::vec3 evaluateBezierTangent(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t);
+void updateProjectiles(float tprev, float tnow);
+
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -185,6 +183,21 @@ struct SceneObject
     GLuint       vertex_array_object_id; // ID do VAO onde estão armazenados os atributos do modelo
     glm::vec3    bbox_min; // Axis-Aligned Bounding Box do objeto
     glm::vec3    bbox_max;
+};
+
+struct Enemy {
+    int id;                 // ID para o shader (ENEMY1, ENEMY2, etc)
+    glm::vec4 position;     // Posição no mundo
+    glm::vec3 forward;      // Para onde ele está olhando/indo
+    float speed;            // Velocidade de movimento
+    float changeDirTimer;   // Tempo até a próxima mudança de direção aleatória
+};
+
+struct Projectile {
+    glm::vec3 p0, p1, p2, p3; // Pontos de controle da Bézier
+    float t;                  // Tempo (0.0 a 1.0)
+    float speed;              // Velocidade da animação
+    bool active;              // Se deve ser desenhado ou não
 };
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
@@ -253,6 +266,9 @@ glm::vec3 g_AircraftForward = glm::vec3(0.0f, 0.0f, 1.0f);
 // Lista global de inimigos
 std::vector<Enemy> g_Enemies;
 
+// Lista de tiros
+std::vector<Projectile> g_Projectiles;
+
 // Flags para controle de movimento 
 float isWPressed = false;
 float isAPressed = false;
@@ -260,6 +276,9 @@ float isDPressed = false;
 
 // Variaveis de posição da lua
 glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+// Trava para não metralhar ao segurar espaço
+bool isSpacePressed = false;
 
 
 int main(int argc, char* argv[])
@@ -530,6 +549,41 @@ int main(int argc, char* argv[])
             }
         }
 
+        for (const auto &proj : g_Projectiles) {
+            if (!proj.active) continue;
+
+            // Calcula Posição e Rotação na Curva
+            glm::vec3 pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
+            glm::vec3 tangent = evaluateBezierTangent(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
+
+            // Cria Matriz de Rotação (Alinha o míssil com a tangente)
+            glm::vec3 up_aux = glm::vec3(0.0f, 1.0f, 0.0f);
+            if (fabs(tangent.y) > 0.99f) up_aux = glm::vec3(1.0f, 0.0f, 0.0f);
+            
+            glm::vec3 right_proj = glm::normalize(glm::cross(up_aux, tangent));
+            glm::vec3 up_proj = glm::normalize(glm::cross(tangent, right_proj));
+
+            glm::mat4 rotation_align = glm::mat4(1.0f);
+            rotation_align[0] = glm::vec4(right_proj, 0.0f);
+            rotation_align[1] = glm::vec4(up_proj, 0.0f);
+            rotation_align[2] = glm::vec4(tangent, 0.0f);
+
+            model = Matrix_Translate(pos.x, pos.y, pos.z)
+                  * rotation_align
+                  * Matrix_Scale(0.1f, 0.1f, 0.1f) 
+                  * Matrix_Rotate_Y(M_PI);         
+
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, AIRCRAFT); // Usa textura da nave
+
+            for (size_t i = 0; i < aircraft_model.shapes.size(); i++) {
+                if (aircraft_model.shapes[i].name == "R-40TL") {
+                    DrawVirtualObject(aircraft_model.shapes[i].name.c_str());
+                    break;
+                }
+            }
+        }
+
         // Desenhamos o plano do chão (lua)
         model = Matrix_Translate(moon_position.x, moon_position.y, moon_position.z) * Matrix_Scale(15.0f/60.0f, 15.0f/60.0f, 15.0f/60.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -538,6 +592,7 @@ int main(int argc, char* argv[])
 
         moveAircraft(tprev, tnow, g_AircraftPosition);
         moveEnemies(tprev, tnow); 
+        updateProjectiles(tprev, tnow); 
 
         tprev = tnow;
 
@@ -1378,6 +1433,16 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             ;
     }
 
+    if (key == GLFW_KEY_SPACE) {
+        if (action == GLFW_PRESS && !isSpacePressed) {
+            Shoot();
+            isSpacePressed = true;
+        }
+        if (action == GLFW_RELEASE) {
+            isSpacePressed = false;
+        }
+    }
+
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
@@ -1822,5 +1887,75 @@ void moveEnemies(float tprev, float tnow) {
 
         glm::vec3 finalDir = glm::normalize(glm::vec3(relativePosition));
         enemy.position = glm::vec4(center + (finalDir * fixedDistance), 1.0f);
+    }
+}
+
+void Shoot() {
+    Projectile p;
+    p.active = true;
+    p.t = 0.0f;
+    p.speed = 1.5f; 
+
+    glm::vec3 center = glm::vec3(moon_position);       // Centro da Lua
+    glm::vec3 shipPos = glm::vec3(g_AircraftPosition); // Posição da Nave
+    
+    // Vetores de Referência
+    glm::vec3 up = glm::normalize(shipPos - center); 
+    glm::vec3 forward = glm::normalize(g_AircraftForward - glm::dot(g_AircraftForward, up) * up);
+    glm::vec3 right = glm::normalize(glm::cross(up, forward));
+
+    float orbit_angle = 1.0f;        // Distância do tiro (em radianos)
+    float height_multiplier = 1.1f;  // Altura do arco 
+
+    // P0: O TIRO SAI DO CENTRO DA NAVE 
+    p.p0 = shipPos;
+
+    // P1: 1/3 do caminho (Rotaciona e sobe)
+    glm::mat4 rot1 = Matrix_Rotate(orbit_angle * 0.33f, glm::vec4(right, 0.0f));
+    glm::vec4 vec_p1 = rot1 * glm::vec4(p.p0 - center, 1.0f);
+    p.p1 = center + (glm::vec3(vec_p1) * height_multiplier);
+
+    // P2: 2/3 do caminho (Rotaciona e sobe)
+    glm::mat4 rot2 = Matrix_Rotate(orbit_angle * 0.66f, glm::vec4(right, 0.0f));
+    glm::vec4 vec_p2 = rot2 * glm::vec4(p.p0 - center, 1.0f);
+    p.p2 = center + (glm::vec3(vec_p2) * height_multiplier);
+
+    // P3: Alvo final (No chão/Orbita)
+    glm::mat4 rot3 = Matrix_Rotate(orbit_angle, glm::vec4(right, 0.0f));
+    glm::vec4 vec_p3 = rot3 * glm::vec4(p.p0 - center, 1.0f);
+    p.p3 = center + glm::vec3(vec_p3);
+
+    g_Projectiles.push_back(p);
+}
+
+// Fórmula da Curva de Bézier Cúbica 
+glm::vec3 evaluateBezier(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t) {
+    float u = 1.0f - t;
+    float tt = t * t;
+    float uu = u * u;
+    float uuu = uu * u;
+    float ttt = tt * t;
+
+    return (uuu * p0) + (3 * uu * t * p1) + (3 * u * tt * p2) + (ttt * p3);
+}
+
+// Derivada da Curva 
+glm::vec3 evaluateBezierTangent(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t) {
+    float u = 1.0f - t;
+    float uu = u * u;
+    float tt = t * t;
+
+    glm::vec3 tangent = 3.0f * uu * (p1 - p0) + 6.0f * u * t * (p2 - p1) + 3.0f * tt * (p3 - p2);
+    return glm::normalize(tangent);
+}
+
+// Função para atualizar o tempo 't' dos tiros
+void updateProjectiles(float tprev, float tnow) {
+    float delta_t = tnow - tprev;
+    for (auto &p : g_Projectiles) {
+        if (p.active) {
+            p.t += p.speed * delta_t; // Avança o tempo
+            if (p.t >= 1.0f) p.active = false; // Remove se acabou
+        }
     }
 }
