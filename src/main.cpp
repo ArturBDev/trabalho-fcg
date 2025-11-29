@@ -291,6 +291,10 @@ glm::vec4 g_CheckpointPosition = glm::vec4(0.0f, 0.0f, -16.0f, 1.0f);
 
 bool g_CheckpointReached = false;
 
+const float enemyRange = 25.0f; // Distância máxima para o inimigo atirar
+
+const float minAngleToShoot = 0.90f; // Aproximadamente 25 graus de tolerância
+
 int main(int argc, char* argv[])
 {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -1865,7 +1869,7 @@ void InitEnemies() {
         glm::vec4 up = NormalizeVector(e.position - moon_position);
         glm::vec4 randomDir = glm::vec4(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), 0.0f);
         
-        e.forward = NormalizeVector(randomDir - glm::dot(randomDir, up) * up);
+        e.forward = NormalizeVector(randomDir - dotproduct(randomDir, up) * up);
         
         e.speed = 5.0f;
         e.changeDirTimer = randomFloat(1.0f, 3.0f); 
@@ -1877,47 +1881,78 @@ void InitEnemies() {
 
 void moveEnemies(float tprev, float tnow) {
     float delta_t = tnow - tprev;
-    glm::vec4 center = glm::vec4(moon_position);
-    float fixedDistance = 16.0f; 
+    glm::vec4 center = moon_position;
+    float fixedDistance = 16.0f; // Raio da órbita da Lua
 
     for (auto &enemy : g_Enemies) {
         glm::vec4 currentPos = enemy.position;
+        // Vetor UP (Normal da Lua)
         glm::vec4 up_vec = NormalizeVector(currentPos - center);
         
         // Garante que o forward é tangente à superfície (corrige drift)
-        enemy.forward = NormalizeVector(enemy.forward - dotproduct(enemy.forward, up_vec) * up_vec);
+        glm::vec4 projection = dotproduct(enemy.forward, up_vec) * up_vec;
+        enemy.forward = enemy.forward - projection;
+        enemy.forward = NormalizeVector(enemy.forward); 
         
         glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, enemy.forward));
 
+        // 2. Lógica de mudança de direção aleatória
         enemy.changeDirTimer -= delta_t;
         if (enemy.changeDirTimer <= 0.0f) {
-            float turnAngle = randomFloat(-1.5f, 1.5f); // Curva aleatória entre esq e dir
+            float turnAngle = randomFloat(-1.5f, 1.5f); 
             
-            // Rotaciona o vetor Forward ao redor do eixo UP (Normal da lua)
             glm::mat4 turnMatrix = Matrix_Rotate(turnAngle, up_vec);
             enemy.forward = NormalizeVector(turnMatrix * enemy.forward);
 
-            // Reseta o timer para a próxima mudança
             enemy.changeDirTimer = randomFloat(0.5f, 4.0f);
         }
 
+        // 3. Lógica de movimento na órbita
         float angle = enemy.speed * delta_t * 0.05f; 
-        glm::mat4 moveMatrix = Matrix_Rotate(angle,right_vec);
+        glm::mat4 moveMatrix = Matrix_Rotate(angle, right_vec);
 
         glm::vec4 relativePosition = currentPos - center;
         relativePosition = moveMatrix * relativePosition;
         
+        // Atualiza a direção forward após a rotação de movimento
         enemy.forward = NormalizeVector(moveMatrix * enemy.forward);
 
-        glm::vec4 finalDir = NormalizeVector(relativePosition);
+        // Reprojetar na distância fixa de órbita
+        glm::vec4 finalDir = relativePosition; finalDir.w = 0.0f;
+        finalDir = NormalizeVector(finalDir);
         enemy.position = center + (finalDir * fixedDistance);
+        enemy.position.w = 1.0f; 
 
         enemy.shootTimer -= delta_t;
 
         if (enemy.shootTimer <= 0.0f) {
-            EnemyShoot(enemy);
             
-            enemy.shootTimer = randomFloat(3.0f, 6.0f); 
+            // 1. Vetor de Direção e Distância (para Broad Phase)
+            glm::vec4 vector_to_target = g_AircraftPosition - enemy.position;
+            vector_to_target.w = 0.0f; 
+            float distance_to_aircraft = norm(vector_to_target);
+            
+            if (distance_to_aircraft < enemyRange) { // Checagem de Distância (Broad Phase)
+                
+                // Vetor do inimigo para o alvo, normalizado
+                glm::vec4 normalized_direction_to_target = vector_to_target / distance_to_aircraft;
+                
+                // 2. Checa alinhamento entre o Forward do Inimigo e a Direção do Alvo
+                float alignment = dotproduct(enemy.forward, normalized_direction_to_target);
+                
+                if (alignment > minAngleToShoot) {
+                    
+                    EnemyShoot(enemy);
+                    enemy.shootTimer = randomFloat(3.0f, 6.0f); // Atirou, reseta o timer
+                    
+                } else {
+                    // Não está olhando, mas está no alcance. Checa novamente em 0.5s.
+                    enemy.shootTimer = 0.5f; 
+                }
+            } else {
+                // Fora do alcance. Checa novamente em 1.0s.
+                enemy.shootTimer = 1.0f; 
+            }
         }
     }
 }
@@ -1991,6 +2026,60 @@ void updateProjectiles(float tprev, float tnow) {
 }
 
 void processCollisions() {
+    // Variáveis auxiliares para a esfera de colisão
+    float fixedDistance = 16.0f; // Raio da órbita/Lua
+    // Distância mínima 
+    float separation_radius = AIRCRAFT_SPHERE_RADIUS * 2.0f; 
+    
+    for (size_t i = 0; i < g_Enemies.size(); ++i) {
+        for (size_t j = i + 1; j < g_Enemies.size(); ++j) {
+            Enemy &e1 = g_Enemies[i];
+            Enemy &e2 = g_Enemies[j];
+
+            glm::vec4 diff_vector = e1.position - e2.position;
+            diff_vector.w = 0.0f; // Garante que é um vetor de direção
+            
+            float current_distance = norm(diff_vector);
+            
+            // Se estiverem muito próximos (menor que o raio de separação)
+            if (current_distance < separation_radius) {
+                
+                float overlap = separation_radius - current_distance;
+                
+                // Evita divisão por zero
+                if (current_distance < std::numeric_limits<float>::epsilon()) {
+                    // Se for zero, aplica um pequeno empurrão aleatório
+                    glm::vec4 randomDir = glm::vec4(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), 0.0f);
+                    diff_vector = randomDir;
+                    current_distance = norm(randomDir);
+                }
+                
+                // Direção de separação (normalizada)
+                glm::vec4 separation_direction = diff_vector / current_distance; 
+                separation_direction.w = 0.0f;
+
+                // Aplica correção, movendo metade do excesso para cada um
+                glm::vec4 correction = separation_direction * (overlap * 0.5f);
+                e1.position += correction;
+                e2.position -= correction;
+
+                // Reprojetar ambos os inimigos na órbita da Lua (fixedDistance)
+                glm::vec4 center = moon_position;
+
+                // Reprojetar E1
+                glm::vec4 dir1 = e1.position - center; dir1.w = 0.0f;
+                e1.position = center + (dir1 / norm(dir1) * fixedDistance);
+                e1.position.w = 1.0f;
+
+                // Reprojetar E2
+                glm::vec4 dir2 = e2.position - center; dir2.w = 0.0f;
+                e2.position = center + (dir2 / norm(dir2) * fixedDistance);
+                e2.position.w = 1.0f;
+            }
+        }
+    }
+
+
     // =======================================================
     // Colisão Projétil vs. Inimigo (PONTO-ESFERA) 
     // =======================================================
@@ -2009,7 +2098,6 @@ void processCollisions() {
             // Cria a Bounding Sphere do Inimigo
             BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
 
-            // Realiza o teste PONTO-ESFERA
             if (checkPointSphereCollision(current_proj_pos, enemySphere)) {
                 
                 printf("Hit! \n", enemy.id);
@@ -2036,7 +2124,6 @@ void processCollisions() {
         // Cria a Bounding Sphere do Inimigo
         BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
 
-        // Realiza o teste ESFERA-ESFERA
         if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {
             printf("CRASH! \n", enemy.id);
             //falta a logica de game over ou dano
@@ -2056,17 +2143,16 @@ void processCollisions() {
         
         // Vetor de movimento (posição atual - posição anterior)
         glm::vec4 movement_vector = g_AircraftPosition - g_AircraftPosition_Prev;
+        movement_vector.w = 0.0f; 
         
         // Normaliza para obter a direção do raio
         trajectoryRay.direction = NormalizeVector(movement_vector);
         
-        // 2. Define a Esfera (Checkpoint)
         BoundingSphere checkpointSphere = getCheckpointBoundingSphere(g_CheckpointPosition);
         
         float t_hit; // Distância do ponto de colisão
-        float movement_distance = glm::length(movement_vector);
+        float movement_distance = norm(movement_vector); 
 
-        // Realiza o teste RAIO-ESFERA
         if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
             
             // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento
@@ -2091,32 +2177,36 @@ void EnemyShoot(Enemy& enemy) {
     glm::vec4 enemyPos = enemy.position;
     glm::vec4 targetPos = g_AircraftPosition; // O alvo é a nave do jogador
     
-    // 1. Definição do P0 (Origem)
-    p.p0 = enemyPos;
-
-    // 2. Definição do P3 (Alvo)
-    // O míssil deve atingir a órbita da nave do jogador
-    p.p3 = targetPos; 
-
     // 3. Vetor de Mirada (Direção do Alvo)
     glm::vec4 directionToTarget = NormalizeVector(targetPos - enemyPos);
 
-    // 4. Criação dos Pontos de Controle P1 e P2 (para criar o arco)
-    // Usamos um arco suave que se curva ligeiramente.
+    // 1. Definição do P0 (Origem)
+    float offset_distance = AIRCRAFT_SPHERE_RADIUS + 0.1f; // Raio da esfera (0.5) + margem
+    p.p0 = enemyPos + directionToTarget * offset_distance; 
+    p.p0.w = 1.0f; 
+
+    // 2. Definição do P3 (Alvo)
+    p.p3 = targetPos; 
+    p.p3.w = 1.0f; 
 
     float curveHeight = 5.0f; 
-    float distance = glm::distance(enemyPos, targetPos);
+    float distance = norm(enemyPos - targetPos); // Comprimento do vetor diferença
     
     // P1: Posição intermediária 1/3 do caminho + um pico de altura
     p.p1 = enemyPos + (directionToTarget * (distance * 0.33f)) + (NormalizeVector(enemy.forward) * (curveHeight * 0.5f));
+    p.p1.w = 1.0f;
 
     // P2: Posição intermediária 2/3 do caminho + um pico de altura
     p.p2 = enemyPos + (directionToTarget * (distance * 0.66f)) + (NormalizeVector(enemy.forward) * (curveHeight * 0.5f));
+    p.p2.w = 1.0f;
     
     // Otimização: Garantir que P1 e P2 fiquem na órbita aproximada da lua
     p.p1 = NormalizeVector(p.p1 - center) * MOON_RADIUS * 1.05f;
-    p.p2 = NormalizeVector(p.p2 - center) * MOON_RADIUS * 1.05f;
+    p.p1.w = 1.0f;
 
+
+    p.p2 = NormalizeVector(p.p2 - center) * MOON_RADIUS * 1.05f;
+    p.p2.w = 1.0f;
 
     g_Projectiles.push_back(p);
 }

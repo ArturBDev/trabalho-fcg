@@ -18,8 +18,10 @@ const float CHECKPOINT_RADIUS = 2.5f;
  */
 float distanceSq(const glm::vec4& p1, const glm::vec4& p2) {
     glm::vec4 diff = p1 - p2;
-    // O produto escalar (dot product) de um vetor por ele mesmo é a norma ao quadrado.
-    return glm::dot(diff, diff); 
+    diff.w = 0.0f; 
+
+    //não conseguimos usar o dotproduct direto por conta do conflito de includes
+    return dot(diff, diff); 
 }
 
 /**
