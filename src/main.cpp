@@ -48,6 +48,7 @@
 // Headers locais, definidos na pasta "include/"
 #include "utils.h"
 #include "matrices.h"
+#include "collisions.h"
 
 #define SKYBOX 0
 #define AIRCRAFT 1
@@ -170,6 +171,7 @@ void Shoot();
 glm::vec3 evaluateBezier(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t);
 glm::vec3 evaluateBezierTangent(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t);
 void updateProjectiles(float tprev, float tnow);
+void processCollisions();
 
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
@@ -262,6 +264,7 @@ GLuint g_NumLoadedTextures = 0;
 // Variáveis que controlam a posição da aeronave no mundo.
 glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 16.0f, 0.0f, 1.0f);
 glm::vec3 g_AircraftForward = glm::vec3(0.0f, 0.0f, 1.0f); 
+glm::vec4 g_AircraftPosition_Prev = glm::vec4(g_AircraftPosition); // Inicializa com a posição inicial.
 
 // Lista global de inimigos
 std::vector<Enemy> g_Enemies;
@@ -279,6 +282,8 @@ glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 // Trava para não metralhar ao segurar espaço
 bool isSpacePressed = false;
+
+glm::vec3 g_CheckpointPosition = glm::vec3(0.0f, 0.0f, 16.0f);
 
 
 int main(int argc, char* argv[])
@@ -593,6 +598,10 @@ int main(int argc, char* argv[])
         moveAircraft(tprev, tnow, g_AircraftPosition);
         moveEnemies(tprev, tnow); 
         updateProjectiles(tprev, tnow); 
+
+        processCollisions(); 
+
+        g_AircraftPosition_Prev = g_AircraftPosition; 
 
         tprev = tnow;
 
@@ -1956,6 +1965,95 @@ void updateProjectiles(float tprev, float tnow) {
         if (p.active) {
             p.t += p.speed * delta_t; // Avança o tempo
             if (p.t >= 1.0f) p.active = false; // Remove se acabou
+        }
+    }
+}
+
+void processCollisions() {
+    // =======================================================
+    // Colisão Projétil vs. Inimigo (PONTO-ESFERA) 
+    // =======================================================
+    
+    // Iteramos sobre os projéteis
+    for (auto &proj : g_Projectiles) {
+        if (!proj.active) continue;
+        
+        // A posição atual do projétil é tratada como um PONTO na curva de Bézier
+        glm::vec3 current_proj_pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
+
+        // Iteramos sobre os inimigos
+        for (size_t i = 0; i < g_Enemies.size(); ++i) {
+            Enemy &enemy = g_Enemies[i];
+            
+            // Cria a Bounding Sphere do Inimigo
+            BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
+
+            // Realiza o teste PONTO-ESFERA
+            if (checkPointSphereCollision(current_proj_pos, enemySphere)) {
+                
+                printf("Hit! \n", enemy.id);
+                proj.active = false; // Projétil é destruído
+                
+                std::swap(g_Enemies[i], g_Enemies.back());
+                g_Enemies.pop_back(); 
+                --i; // Decrementa o índice para checar o elemento que foi movido para esta posição
+                break; // Projétil só acerta um inimigo por frame
+            }
+        }
+    }
+
+    // =======================================================
+    // Propósito 2: Colisão Nave vs. Inimigo (ESFERA-ESFERA)
+    // =======================================================
+    
+    // Cria a Bounding Sphere da Nave
+    BoundingSphere aircraftSphere = getAircraftBoundingSphere(g_AircraftPosition);
+    
+    // Iteramos sobre os inimigos
+    for (const auto &enemy : g_Enemies) {
+        
+        // Cria a Bounding Sphere do Inimigo
+        BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
+
+        // Realiza o teste ESFERA-ESFERA
+        if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {
+            printf("CRASH! \n", enemy.id);
+            //falta a logica de game over ou dano
+        }
+    }
+    
+    // =======================================================
+    // Propósito 3: Checkpoint em Órbita (RAIO-ESFERA)
+    // =======================================================
+    
+    // A nave precisa ter se movido para que o raio de trajetória seja válido
+    if (g_AircraftPosition_Prev != g_AircraftPosition) {
+        
+        // 1. Define o Raio (Linha de Movimento da Nave)
+        Ray trajectoryRay;
+        trajectoryRay.origin = glm::vec3(g_AircraftPosition_Prev); // Posição anterior
+        
+        // Vetor de movimento (posição atual - posição anterior)
+        glm::vec3 movement_vector = glm::vec3(g_AircraftPosition) - glm::vec3(g_AircraftPosition_Prev);
+        
+        // Normaliza para obter a direção do raio
+        trajectoryRay.direction = glm::normalize(movement_vector);
+        
+        // 2. Define a Esfera (Checkpoint)
+        BoundingSphere checkpointSphere = getCheckpointBoundingSphere(g_CheckpointPosition);
+        
+        float t_hit; // Distância do ponto de colisão
+        float movement_distance = glm::length(movement_vector);
+
+        // Realiza o teste RAIO-ESFERA
+        if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
+            
+            // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento
+            // de linha percorrido pela nave neste frame.
+            if (t_hit >= 0.0f && t_hit <= movement_distance) { 
+                printf("CHECKPOINT REACHED! \n", t_hit);
+                // Implementar lógica de avanço de fase/vitória aqui
+            }
         }
     }
 }
