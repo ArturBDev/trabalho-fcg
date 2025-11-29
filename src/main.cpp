@@ -56,6 +56,7 @@
 #define ENEMY1 3
 #define ENEMY2 4
 #define ENEMY3 5
+#define CHECKPOINT_SPHERE 7
 
 #define M_PI_2 1.57079632679489661923
 #define M_PI 3.14159265358979323846
@@ -283,8 +284,9 @@ glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 // Trava para não metralhar ao segurar espaço
 bool isSpacePressed = false;
 
-glm::vec3 g_CheckpointPosition = glm::vec3(0.0f, 0.0f, 16.0f);
+glm::vec4 g_CheckpointPosition = glm::vec4(0.0f, 0.0f, -16.0f, 1.0f);
 
+bool g_CheckpointReached = false;
 
 int main(int argc, char* argv[])
 {
@@ -587,6 +589,16 @@ int main(int argc, char* argv[])
                     break;
                 }
             }
+        }
+
+        if (!g_CheckpointReached) 
+        {
+            glm::mat4 checkpoint_model = Matrix_Translate(g_CheckpointPosition.x, g_CheckpointPosition.y, g_CheckpointPosition.z)
+                                    * Matrix_Scale(0.25f/15.0f, 0.25f/15.0f, 0.25f/15.0f); // Use um fator de escala visível (ex: 2.5)
+                                    
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(checkpoint_model));
+            glUniform1i(g_object_id_uniform, CHECKPOINT_SPHERE); // Usa o novo ID (7)
+            DrawVirtualObject("the_sphere"); 
         }
 
         // Desenhamos o plano do chão (lua)
@@ -2045,14 +2057,15 @@ void processCollisions() {
         float t_hit; // Distância do ponto de colisão
         float movement_distance = glm::length(movement_vector);
 
-        // Realiza o teste RAIO-ESFERA
+// Realiza o teste RAIO-ESFERA
         if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
             
             // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento
-            // de linha percorrido pela nave neste frame.
             if (t_hit >= 0.0f && t_hit <= movement_distance) { 
-                printf("CHECKPOINT REACHED! \n", t_hit);
-                // Implementar lógica de avanço de fase/vitória aqui
+                if (!g_CheckpointReached) {
+                    g_CheckpointReached = true;
+                    printf("CHECKPOINT REACHED!\n", t_hit);
+                }
             }
         }
     }

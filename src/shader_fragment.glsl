@@ -25,6 +25,7 @@ uniform mat4 projection;
 #define ENEMY1 3
 #define ENEMY2 4
 #define ENEMY3 5
+#define CHECKPOINT_SPHERE 7
 
 uniform int object_id;
 
@@ -110,6 +111,15 @@ void main()
         V = texcoords.y; 
 
         Kd0 = texture(TextureImage1, vec2(U,V)).rgb;
+
+        color.rgb = Kd0;
+    }
+    else if ( object_id == CHECKPOINT_SPHERE )
+    {
+        U = texcoords.x;
+        V = texcoords.y; 
+
+        Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
 
         color.rgb = Kd0;
     }
