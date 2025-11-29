@@ -119,6 +119,22 @@ struct ObjModel
     }
 };
 
+struct Enemy {
+    int id;                 // ID para o shader (ENEMY1, ENEMY2, etc)
+    glm::vec4 position;     // Posição no mundo
+    glm::vec3 forward;      // Para onde ele está olhando/indo
+    float speed;            // Velocidade de movimento
+    float changeDirTimer;   // Tempo até a próxima mudança de direção aleatória
+    float shootTimer;       // <-- NOVO: Tempo até o próximo tiro
+};
+
+struct Projectile {
+    glm::vec3 p0, p1, p2, p3; // Pontos de controle da Bézier
+    float t;                  // Tempo (0.0 a 1.0)
+    float speed;              // Velocidade da animação
+    bool active;              // Se deve ser desenhado ou não
+};
+
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
@@ -173,6 +189,7 @@ glm::vec3 evaluateBezier(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3,
 glm::vec3 evaluateBezierTangent(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t);
 void updateProjectiles(float tprev, float tnow);
 void processCollisions();
+void EnemyShoot(Enemy& enemy);
 
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
@@ -186,21 +203,6 @@ struct SceneObject
     GLuint       vertex_array_object_id; // ID do VAO onde estão armazenados os atributos do modelo
     glm::vec3    bbox_min; // Axis-Aligned Bounding Box do objeto
     glm::vec3    bbox_max;
-};
-
-struct Enemy {
-    int id;                 // ID para o shader (ENEMY1, ENEMY2, etc)
-    glm::vec4 position;     // Posição no mundo
-    glm::vec3 forward;      // Para onde ele está olhando/indo
-    float speed;            // Velocidade de movimento
-    float changeDirTimer;   // Tempo até a próxima mudança de direção aleatória
-};
-
-struct Projectile {
-    glm::vec3 p0, p1, p2, p3; // Pontos de controle da Bézier
-    float t;                  // Tempo (0.0 a 1.0)
-    float speed;              // Velocidade da animação
-    bool active;              // Se deve ser desenhado ou não
 };
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
@@ -1866,7 +1868,8 @@ void InitEnemies() {
         e.forward = glm::normalize(randomDir - glm::dot(randomDir, up) * up);
         
         e.speed = 5.0f;
-        e.changeDirTimer = randomFloat(1.0f, 3.0f); // Muda direção a cada 1 a 3 segundos
+        e.changeDirTimer = randomFloat(1.0f, 3.0f); 
+        e.shootTimer = randomFloat(2.0f, 5.0f); 
         
         g_Enemies.push_back(e);
     }
@@ -1908,6 +1911,14 @@ void moveEnemies(float tprev, float tnow) {
 
         glm::vec3 finalDir = glm::normalize(glm::vec3(relativePosition));
         enemy.position = glm::vec4(center + (finalDir * fixedDistance), 1.0f);
+
+        enemy.shootTimer -= delta_t;
+
+        if (enemy.shootTimer <= 0.0f) {
+            EnemyShoot(enemy);
+            
+            enemy.shootTimer = randomFloat(3.0f, 6.0f); 
+        }
     }
 }
 
@@ -2069,4 +2080,45 @@ void processCollisions() {
             }
         }
     }
+}
+
+// Função para o inimigo atirar em direção à aeronave.
+void EnemyShoot(Enemy& enemy) {
+    Projectile p;
+    p.active = true;
+    p.t = 0.0f;
+    p.speed = 2.0f; 
+
+    glm::vec3 center = glm::vec3(moon_position);       
+    glm::vec3 enemyPos = glm::vec3(enemy.position);
+    glm::vec3 targetPos = glm::vec3(g_AircraftPosition); // O alvo é a nave do jogador
+    
+    // 1. Definição do P0 (Origem)
+    p.p0 = enemyPos;
+
+    // 2. Definição do P3 (Alvo)
+    // O míssil deve atingir a órbita da nave do jogador
+    p.p3 = targetPos; 
+
+    // 3. Vetor de Mirada (Direção do Alvo)
+    glm::vec3 directionToTarget = glm::normalize(targetPos - enemyPos);
+
+    // 4. Criação dos Pontos de Controle P1 e P2 (para criar o arco)
+    // Usamos um arco suave que se curva ligeiramente.
+
+    float curveHeight = 5.0f; 
+    float distance = glm::distance(enemyPos, targetPos);
+    
+    // P1: Posição intermediária 1/3 do caminho + um pico de altura
+    p.p1 = enemyPos + (directionToTarget * (distance * 0.33f)) + (glm::normalize(enemy.forward) * (curveHeight * 0.5f));
+
+    // P2: Posição intermediária 2/3 do caminho + um pico de altura
+    p.p2 = enemyPos + (directionToTarget * (distance * 0.66f)) + (glm::normalize(enemy.forward) * (curveHeight * 0.5f));
+    
+    // Garantir que P1 e P2 fiquem na órbita aproximada da lua
+    p.p1 = glm::normalize(p.p1 - center) * MOON_RADIUS * 1.05f;
+    p.p2 = glm::normalize(p.p2 - center) * MOON_RADIUS * 1.05f;
+
+
+    g_Projectiles.push_back(p);
 }
