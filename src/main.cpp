@@ -295,6 +295,9 @@ const float enemyRange = 25.0f; // Distância máxima para o inimigo atirar
 
 const float minAngleToShoot = 0.90f; // Aproximadamente 25 graus de tolerância
 
+const float turnRate = 2.0f; // Velocidade máxima de giro (em radianos/segundo)
+const float enemySpeed = 5.0f; // Velocidade do inimigo
+
 int main(int argc, char* argv[])
 {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -1882,41 +1885,55 @@ void InitEnemies() {
 void moveEnemies(float tprev, float tnow) {
     float delta_t = tnow - tprev;
     glm::vec4 center = moon_position;
-    float fixedDistance = 16.0f; // Raio da órbita da Lua
+    float fixedDistance = 16.0f; 
 
     for (auto &enemy : g_Enemies) {
         glm::vec4 currentPos = enemy.position;
-        // Vetor UP (Normal da Lua)
         glm::vec4 up_vec = NormalizeVector(currentPos - center);
         
-        // Garante que o forward é tangente à superfície (corrige drift)
-        glm::vec4 projection = dotproduct(enemy.forward, up_vec) * up_vec;
-        enemy.forward = enemy.forward - projection;
+        // Garante que o forward é tangente à superfície
+        glm::vec4 projection_fwd = dotproduct(enemy.forward, up_vec) * up_vec;
+        enemy.forward = enemy.forward - projection_fwd;
         enemy.forward = NormalizeVector(enemy.forward); 
         
-        glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, enemy.forward));
+        // Vetor Desejado (Inimigo -> Jogador)
+        glm::vec4 vector_to_target = g_AircraftPosition - enemy.position;
+        vector_to_target.w = 0.0f; 
+        
+        // Projeta o vetor Desejado no plano tangente (impede que ele tente perfurar a Lua)
+        projection_fwd = dotproduct(vector_to_target, up_vec) * up_vec;
+        glm::vec4 desired_forward = vector_to_target - projection_fwd;
+        desired_forward = NormalizeVector(desired_forward); // Vetor para onde o inimigo deve olhar
 
-        // 2. Lógica de mudança de direção aleatória
-        enemy.changeDirTimer -= delta_t;
-        if (enemy.changeDirTimer <= 0.0f) {
-            float turnAngle = randomFloat(-1.5f, 1.5f); 
-            
-            glm::mat4 turnMatrix = Matrix_Rotate(turnAngle, up_vec);
-            enemy.forward = NormalizeVector(turnMatrix * enemy.forward);
+        // Calcula o eixo e o ângulo para girar de enemy.forward para desired_forward
+        glm::vec4 rotation_axis = crossproduct(enemy.forward, desired_forward);
+        
+        float dot_value = dotproduct(enemy.forward, desired_forward);
+        
+        // Limita o valor do dotproduct para evitar erros de floating point com acos
+        if (dot_value > 1.0f) dot_value = 1.0f;
+        if (dot_value < -1.0f) dot_value = -1.0f;
 
-            enemy.changeDirTimer = randomFloat(0.5f, 4.0f);
+        float angle_to_turn = std::acos(dot_value);
+        
+        // Limita a rotação para a taxa máxima de giro (para um movimento suave)
+        if (angle_to_turn > turnRate * delta_t) {
+            angle_to_turn = turnRate * delta_t;
         }
 
-        // 3. Lógica de movimento na órbita
-        float angle = enemy.speed * delta_t * 0.05f; 
-        glm::mat4 moveMatrix = Matrix_Rotate(angle, right_vec);
+        // Aplica a rotação de Steering
+        glm::mat4 turnMatrix = Matrix_Rotate(angle_to_turn, rotation_axis);
+        enemy.forward = NormalizeVector(turnMatrix * enemy.forward);
+
+        
+        glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, enemy.forward));
+        
+        float angle_of_advance = enemySpeed * delta_t * 0.05f; 
+        glm::mat4 moveMatrix = Matrix_Rotate(angle_of_advance, right_vec); 
 
         glm::vec4 relativePosition = currentPos - center;
         relativePosition = moveMatrix * relativePosition;
         
-        // Atualiza a direção forward após a rotação de movimento
-        enemy.forward = NormalizeVector(moveMatrix * enemy.forward);
-
         // Reprojetar na distância fixa de órbita
         glm::vec4 finalDir = relativePosition; finalDir.w = 0.0f;
         finalDir = NormalizeVector(finalDir);
@@ -1925,32 +1942,21 @@ void moveEnemies(float tprev, float tnow) {
 
         enemy.shootTimer -= delta_t;
 
-        if (enemy.shootTimer <= 0.0f) {
-            
-            // 1. Vetor de Direção e Distância (para Broad Phase)
-            glm::vec4 vector_to_target = g_AircraftPosition - enemy.position;
-            vector_to_target.w = 0.0f; 
+        if (enemy.shootTimer <= 0.0f) {            
             float distance_to_aircraft = norm(vector_to_target);
             
-            if (distance_to_aircraft < enemyRange) { // Checagem de Distância (Broad Phase)
+            if (distance_to_aircraft < enemyRange) { 
                 
-                // Vetor do inimigo para o alvo, normalizado
                 glm::vec4 normalized_direction_to_target = vector_to_target / distance_to_aircraft;
-                
-                // 2. Checa alinhamento entre o Forward do Inimigo e a Direção do Alvo
                 float alignment = dotproduct(enemy.forward, normalized_direction_to_target);
                 
                 if (alignment > minAngleToShoot) {
-                    
                     EnemyShoot(enemy);
-                    enemy.shootTimer = randomFloat(3.0f, 6.0f); // Atirou, reseta o timer
-                    
+                    enemy.shootTimer = randomFloat(3.0f, 6.0f); 
                 } else {
-                    // Não está olhando, mas está no alcance. Checa novamente em 0.5s.
                     enemy.shootTimer = 0.5f; 
                 }
             } else {
-                // Fora do alcance. Checa novamente em 1.0s.
                 enemy.shootTimer = 1.0f; 
             }
         }
