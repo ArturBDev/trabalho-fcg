@@ -1806,7 +1806,7 @@ void PrintObjModelInfo(ObjModel* model)
 void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
     float delta_t = tnow - tprev;
     float speed = 8.0f;         
-    float turn_speed = 2.0f;   
+    float turn_speed = 3.0f;   
     float fixedDistance = 16.0f; 
     
     glm::vec4 center = moon_position;
