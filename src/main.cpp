@@ -122,14 +122,14 @@ struct ObjModel
 struct Enemy {
     int id;                 // ID para o shader (ENEMY1, ENEMY2, etc)
     glm::vec4 position;     // Posição no mundo
-    glm::vec3 forward;      // Para onde ele está olhando/indo
+    glm::vec4 forward;      // Para onde ele está olhando/indo
     float speed;            // Velocidade de movimento
     float changeDirTimer;   // Tempo até a próxima mudança de direção aleatória
     float shootTimer;       // <-- NOVO: Tempo até o próximo tiro
 };
 
 struct Projectile {
-    glm::vec3 p0, p1, p2, p3; // Pontos de controle da Bézier
+    glm::vec4 p0, p1, p2, p3; // Pontos de controle da Bézier
     float t;                  // Tempo (0.0 a 1.0)
     float speed;              // Velocidade da animação
     bool active;              // Se deve ser desenhado ou não
@@ -185,11 +185,12 @@ float randomFloat(float min, float max);
 void InitEnemies();
 void moveEnemies(float tprev, float tnow);
 void Shoot();
-glm::vec3 evaluateBezier(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t);
-glm::vec3 evaluateBezierTangent(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t);
+glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t);
+glm::vec4 evaluateBezierTangent(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t);
 void updateProjectiles(float tprev, float tnow);
 void processCollisions();
 void EnemyShoot(Enemy& enemy);
+glm::vec4 NormalizeVector(glm::vec4 v);
 
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
@@ -266,7 +267,7 @@ GLuint g_NumLoadedTextures = 0;
 
 // Variáveis que controlam a posição da aeronave no mundo.
 glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 16.0f, 0.0f, 1.0f);
-glm::vec3 g_AircraftForward = glm::vec3(0.0f, 0.0f, 1.0f); 
+glm::vec4 g_AircraftForward = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f); 
 glm::vec4 g_AircraftPosition_Prev = glm::vec4(g_AircraftPosition); // Inicializa com a posição inicial.
 
 // Lista global de inimigos
@@ -425,17 +426,17 @@ int main(int argc, char* argv[])
         glm::mat4 model = Matrix_Identity(); 
         glm::mat4 aircraft = Matrix_Identity(); 
         
-        glm::vec3 ship_pos = glm::vec3(g_AircraftPosition);
-        glm::vec3 center   = glm::vec3(moon_position);
+        glm::vec4 ship_pos = glm::vec4(g_AircraftPosition);
+        glm::vec4 center   = glm::vec4(moon_position);
 
-        glm::vec3 up_vec = glm::normalize(ship_pos - center);
-
-        glm::vec3 front_vec = glm::normalize(g_AircraftForward - glm::dot(g_AircraftForward, up_vec) * up_vec);
+        glm::vec4 up_vec = (ship_pos - center); up_vec.w = 0.0f; 
+        up_vec = up_vec / norm(up_vec);
+        glm::vec4 front_vec = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
         
         // Atualizamos a global para evitar drift 
         g_AircraftForward = front_vec; 
 
-        glm::vec3 right_vec = glm::normalize(glm::cross(up_vec, front_vec));  
+        glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, front_vec));  
 
         // O ponto para onde a câmera olha (LookAt) é a própria nave
         glm::vec4 camera_lookat_l = g_AircraftPosition;
@@ -447,15 +448,15 @@ int main(int argc, char* argv[])
         float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
 
         // usando os vetores da nave (Right, Up, Front) como base.
-        glm::vec3 final_offset = (right_vec * offset_x_local) + 
+        glm::vec4 final_offset = (right_vec * offset_x_local) + 
                                  (up_vec    * offset_y_local) + 
                                  (front_vec * offset_z_local);
 
         // A posição da câmera é: Posição da Nave - Deslocamento Calculado
-        glm::vec4 camera_position_c = camera_lookat_l - glm::vec4(final_offset, 0.0f);
+        glm::vec4 camera_position_c = camera_lookat_l - final_offset;
 
         // O vetor "Cima" da câmera agora deve ser a normal da Lua, não o Y global (0,1,0)
-        glm::vec4 camera_up_vector = glm::vec4(up_vec, 0.0f);
+        glm::vec4 camera_up_vector = up_vec;
 
         // Gera a matriz View
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c;
@@ -511,9 +512,9 @@ int main(int argc, char* argv[])
 
 
         glm::mat4 rotation_align = glm::mat4(1.0f);
-        rotation_align[0] = glm::vec4(right_vec, 0.0f); // Coluna 0: Eixo X (Right)
-        rotation_align[1] = glm::vec4(up_vec, 0.0f);    // Coluna 1: Eixo Y (Up)
-        rotation_align[2] = glm::vec4(front_vec, 0.0f); // Coluna 2: Eixo Z (Front)
+        rotation_align[0] = right_vec, 0.0f; // Coluna 0: Eixo X (Right)
+        rotation_align[1] = up_vec;    // Coluna 1: Eixo Y (Up)
+        rotation_align[2] = front_vec; // Coluna 2: Eixo Z (Front)
 
         // Desenhamos o modelo da nave
         aircraft =  Matrix_Translate(g_AircraftPosition.x, g_AircraftPosition.y, g_AircraftPosition.z)
@@ -533,16 +534,15 @@ int main(int argc, char* argv[])
 
         // Loop para desenhar TODOS os inimigos
         for (const auto &enemy : g_Enemies) {
-            glm::vec3 enemy_pos = glm::vec3(enemy.position);
-            glm::vec3 up_e = glm::normalize(enemy_pos - center);
-            glm::vec3 front_e = enemy.forward;
-            glm::vec3 right_e = glm::normalize(glm::cross(up_e, front_e));
-
+            glm::vec4 enemy_pos = enemy.position;
+            glm::vec4 up_e = NormalizeVector(enemy_pos - center);
+            glm::vec4 front_e = enemy.forward;
+            glm::vec4 right_e = NormalizeVector(crossproduct(up_e, front_e));
             // Matriz de alinhamento (LookAt inverso) para o modelo virar corretamente
             glm::mat4 rotation_align_enemy = glm::mat4(1.0f);
-            rotation_align_enemy[0] = glm::vec4(right_e, 0.0f);
-            rotation_align_enemy[1] = glm::vec4(up_e, 0.0f);
-            rotation_align_enemy[2] = glm::vec4(front_e, 0.0f);
+            rotation_align_enemy[0] = right_e;
+            rotation_align_enemy[1] = up_e;
+            rotation_align_enemy[2] = front_e;
 
             model = Matrix_Translate(enemy_pos.x, enemy_pos.y, enemy_pos.z)
                     * rotation_align_enemy
@@ -562,20 +562,20 @@ int main(int argc, char* argv[])
             if (!proj.active) continue;
 
             // Calcula Posição e Rotação na Curva
-            glm::vec3 pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
-            glm::vec3 tangent = evaluateBezierTangent(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
+            glm::vec4 pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
+            glm::vec4 tangent = evaluateBezierTangent(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
 
             // Cria Matriz de Rotação (Alinha o míssil com a tangente)
-            glm::vec3 up_aux = glm::vec3(0.0f, 1.0f, 0.0f);
-            if (fabs(tangent.y) > 0.99f) up_aux = glm::vec3(1.0f, 0.0f, 0.0f);
+            glm::vec4 up_aux = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+            if (fabs(tangent.y) > 0.99f) up_aux = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
             
-            glm::vec3 right_proj = glm::normalize(glm::cross(up_aux, tangent));
-            glm::vec3 up_proj = glm::normalize(glm::cross(tangent, right_proj));
+            glm::vec4 right_proj = NormalizeVector(crossproduct(up_aux, tangent));
+            glm::vec4 up_proj = NormalizeVector(crossproduct(tangent, right_proj));
 
             glm::mat4 rotation_align = glm::mat4(1.0f);
-            rotation_align[0] = glm::vec4(right_proj, 0.0f);
-            rotation_align[1] = glm::vec4(up_proj, 0.0f);
-            rotation_align[2] = glm::vec4(tangent, 0.0f);
+            rotation_align[0] = right_proj;
+            rotation_align[1] = up_proj;
+            rotation_align[2] = tangent;
 
             model = Matrix_Translate(pos.x, pos.y, pos.z)
                   * rotation_align
@@ -1801,28 +1801,28 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
     float speed = 8.0f;         
     float turn_speed = 2.0f;   
     float fixedDistance = 16.0f; 
+    
+    glm::vec4 center = moon_position;
+    glm::vec4 currentPos = aircraft_position;
 
-    glm::vec3 center = glm::vec3(moon_position);
-    glm::vec3 currentPos = glm::vec3(aircraft_position);
+    glm::vec4 up_vec = NormalizeVector(currentPos - center);
 
-    glm::vec3 up_vec = glm::normalize(currentPos - center);
+    g_AircraftForward = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
 
-    g_AircraftForward = glm::normalize(g_AircraftForward - glm::dot(g_AircraftForward, up_vec) * up_vec);
-
-    glm::vec3 right_vec = glm::normalize(glm::cross(up_vec, g_AircraftForward));
+    glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, g_AircraftForward));
     
     if (isWPressed) {
         float angle = speed * delta_t * 0.05f; 
 
 
-        glm::mat4 rotMatrix = Matrix_Rotate(angle, glm::vec4(right_vec, 0.0f));
+        glm::mat4 rotMatrix = Matrix_Rotate(angle, right_vec);
 
-        glm::vec4 relativePosition = glm::vec4(currentPos - center, 1.0f);
+        glm::vec4 relativePosition = currentPos - center;
         relativePosition = rotMatrix * relativePosition;
-        currentPos = center + glm::vec3(relativePosition);
+        currentPos = center + relativePosition;
 
-        glm::vec4 fwd4 = glm::vec4(g_AircraftForward, 0.0f);
-        g_AircraftForward = glm::normalize(glm::vec3(rotMatrix * fwd4));
+        glm::vec4 fwd = g_AircraftForward;
+        g_AircraftForward = NormalizeVector(rotMatrix * fwd);
 
         
         if (isAPressed || isDPressed) {
@@ -1830,18 +1830,18 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
             if (isDPressed) angle = -angle; // Inverte para Direita
 
             // Rotação em torno do eixo UP (Normal da lua)
-            glm::mat4 rotMatrix = Matrix_Rotate(angle, glm::vec4(up_vec, 0.0f));
-
-            glm::vec4 fwd4 = glm::vec4(g_AircraftForward, 0.0f);
-            g_AircraftForward = glm::normalize(glm::vec3(rotMatrix * fwd4));
+            glm::mat4 rotMatrix = Matrix_Rotate(angle, up_vec);
+            
+            glm::vec4 fwd = g_AircraftForward;
+            g_AircraftForward = NormalizeVector(rotMatrix * fwd);
         }
     }
 
 
-    aircraft_position = glm::vec4(currentPos, 1.0f);
+    aircraft_position = currentPos;
     
-    glm::vec3 finalDir = glm::normalize(glm::vec3(aircraft_position) - center);
-    aircraft_position = glm::vec4(center + (finalDir * fixedDistance), 1.0f);
+    glm::vec4 finalDir = NormalizeVector(aircraft_position - center);
+    aircraft_position = center + (finalDir * fixedDistance);
 }
 
 // Função auxiliar para gerar float aleatório entre min e max
@@ -1857,15 +1857,15 @@ void InitEnemies() {
         e.id = ids[i];
         
         // Posição aleatória na esfera 
-        glm::vec3 randomPos = glm::vec3(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f));
-        randomPos = glm::normalize(randomPos) * 16.0f; 
+        glm::vec4 randomPos = glm::vec4(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), 0.0f);
+        randomPos = NormalizeVector(randomPos) * 16.0f; 
         
-        e.position = glm::vec4(randomPos + glm::vec3(moon_position), 1.0f);
+        e.position = randomPos + moon_position;
         
-        glm::vec3 up = glm::normalize(glm::vec3(e.position) - glm::vec3(moon_position));
-        glm::vec3 randomDir = glm::vec3(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f));
+        glm::vec4 up = NormalizeVector(e.position - moon_position);
+        glm::vec4 randomDir = glm::vec4(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), 0.0f);
         
-        e.forward = glm::normalize(randomDir - glm::dot(randomDir, up) * up);
+        e.forward = NormalizeVector(randomDir - glm::dot(randomDir, up) * up);
         
         e.speed = 5.0f;
         e.changeDirTimer = randomFloat(1.0f, 3.0f); 
@@ -1877,40 +1877,40 @@ void InitEnemies() {
 
 void moveEnemies(float tprev, float tnow) {
     float delta_t = tnow - tprev;
-    glm::vec3 center = glm::vec3(moon_position);
+    glm::vec4 center = glm::vec4(moon_position);
     float fixedDistance = 16.0f; 
 
     for (auto &enemy : g_Enemies) {
-        glm::vec3 currentPos = glm::vec3(enemy.position);
-        glm::vec3 up_vec = glm::normalize(currentPos - center);
+        glm::vec4 currentPos = enemy.position;
+        glm::vec4 up_vec = NormalizeVector(currentPos - center);
         
         // Garante que o forward é tangente à superfície (corrige drift)
-        enemy.forward = glm::normalize(enemy.forward - glm::dot(enemy.forward, up_vec) * up_vec);
+        enemy.forward = NormalizeVector(enemy.forward - dotproduct(enemy.forward, up_vec) * up_vec);
         
-        glm::vec3 right_vec = glm::normalize(glm::cross(up_vec, enemy.forward));
+        glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, enemy.forward));
 
         enemy.changeDirTimer -= delta_t;
         if (enemy.changeDirTimer <= 0.0f) {
             float turnAngle = randomFloat(-1.5f, 1.5f); // Curva aleatória entre esq e dir
             
             // Rotaciona o vetor Forward ao redor do eixo UP (Normal da lua)
-            glm::mat4 turnMatrix = Matrix_Rotate(turnAngle, glm::vec4(up_vec, 0.0f));
-            enemy.forward = glm::normalize(glm::vec3(turnMatrix * glm::vec4(enemy.forward, 0.0f)));
+            glm::mat4 turnMatrix = Matrix_Rotate(turnAngle, up_vec);
+            enemy.forward = NormalizeVector(turnMatrix * enemy.forward);
 
             // Reseta o timer para a próxima mudança
             enemy.changeDirTimer = randomFloat(0.5f, 4.0f);
         }
 
         float angle = enemy.speed * delta_t * 0.05f; 
-        glm::mat4 moveMatrix = Matrix_Rotate(angle, glm::vec4(right_vec, 0.0f));
+        glm::mat4 moveMatrix = Matrix_Rotate(angle,right_vec);
 
-        glm::vec4 relativePosition = glm::vec4(currentPos - center, 1.0f);
+        glm::vec4 relativePosition = currentPos - center;
         relativePosition = moveMatrix * relativePosition;
         
-        enemy.forward = glm::normalize(glm::vec3(moveMatrix * glm::vec4(enemy.forward, 0.0f)));
+        enemy.forward = NormalizeVector(moveMatrix * enemy.forward);
 
-        glm::vec3 finalDir = glm::normalize(glm::vec3(relativePosition));
-        enemy.position = glm::vec4(center + (finalDir * fixedDistance), 1.0f);
+        glm::vec4 finalDir = NormalizeVector(relativePosition);
+        enemy.position = center + (finalDir * fixedDistance);
 
         enemy.shootTimer -= delta_t;
 
@@ -1928,13 +1928,13 @@ void Shoot() {
     p.t = 0.0f;
     p.speed = 1.5f; 
 
-    glm::vec3 center = glm::vec3(moon_position);       // Centro da Lua
-    glm::vec3 shipPos = glm::vec3(g_AircraftPosition); // Posição da Nave
+    glm::vec4 center = glm::vec4(moon_position);       // Centro da Lua
+    glm::vec4 shipPos = glm::vec4(g_AircraftPosition); // Posição da Nave
     
     // Vetores de Referência
-    glm::vec3 up = glm::normalize(shipPos - center); 
-    glm::vec3 forward = glm::normalize(g_AircraftForward - glm::dot(g_AircraftForward, up) * up);
-    glm::vec3 right = glm::normalize(glm::cross(up, forward));
+    glm::vec4 up = NormalizeVector(shipPos - center); 
+    glm::vec4 forward = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up) * up);
+    glm::vec4 right = NormalizeVector(crossproduct(up, forward));
 
     float orbit_angle = 1.0f;        // Distância do tiro (em radianos)
     float height_multiplier = 1.1f;  // Altura do arco 
@@ -1943,25 +1943,23 @@ void Shoot() {
     p.p0 = shipPos;
 
     // P1: 1/3 do caminho (Rotaciona e sobe)
-    glm::mat4 rot1 = Matrix_Rotate(orbit_angle * 0.33f, glm::vec4(right, 0.0f));
-    glm::vec4 vec_p1 = rot1 * glm::vec4(p.p0 - center, 1.0f);
-    p.p1 = center + (glm::vec3(vec_p1) * height_multiplier);
+    glm::mat4 rot1 = Matrix_Rotate(orbit_angle * 0.33f, right);
+    glm::vec4 vec_p1 = rot1 * (p.p0 - center);
+    p.p1 = center + (vec_p1 * height_multiplier);
 
     // P2: 2/3 do caminho (Rotaciona e sobe)
-    glm::mat4 rot2 = Matrix_Rotate(orbit_angle * 0.66f, glm::vec4(right, 0.0f));
-    glm::vec4 vec_p2 = rot2 * glm::vec4(p.p0 - center, 1.0f);
-    p.p2 = center + (glm::vec3(vec_p2) * height_multiplier);
-
+    glm::mat4 rot2 = Matrix_Rotate(orbit_angle * 0.66f, right);
+    glm::vec4 vec_p2 = rot2 * (p.p0 - center);
+    p.p2 = center + (vec_p2 * height_multiplier);
     // P3: Alvo final (No chão/Orbita)
-    glm::mat4 rot3 = Matrix_Rotate(orbit_angle, glm::vec4(right, 0.0f));
-    glm::vec4 vec_p3 = rot3 * glm::vec4(p.p0 - center, 1.0f);
-    p.p3 = center + glm::vec3(vec_p3);
-
+    glm::mat4 rot3 = Matrix_Rotate(orbit_angle, right);
+    glm::vec4 vec_p3 = rot3 * (p.p0 - center);
+    p.p3 = center + vec_p3;
     g_Projectiles.push_back(p);
 }
 
 // Fórmula da Curva de Bézier Cúbica 
-glm::vec3 evaluateBezier(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t) {
+glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t) {
     float u = 1.0f - t;
     float tt = t * t;
     float uu = u * u;
@@ -1972,13 +1970,13 @@ glm::vec3 evaluateBezier(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3,
 }
 
 // Derivada da Curva 
-glm::vec3 evaluateBezierTangent(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t) {
+glm::vec4 evaluateBezierTangent(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t) {
     float u = 1.0f - t;
     float uu = u * u;
     float tt = t * t;
 
-    glm::vec3 tangent = 3.0f * uu * (p1 - p0) + 6.0f * u * t * (p2 - p1) + 3.0f * tt * (p3 - p2);
-    return glm::normalize(tangent);
+    glm::vec4 tangent = 3.0f * uu * (p1 - p0) + 6.0f * u * t * (p2 - p1) + 3.0f * tt * (p3 - p2);
+    return NormalizeVector(tangent);
 }
 
 // Função para atualizar o tempo 't' dos tiros
@@ -2002,7 +2000,7 @@ void processCollisions() {
         if (!proj.active) continue;
         
         // A posição atual do projétil é tratada como um PONTO na curva de Bézier
-        glm::vec3 current_proj_pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
+        glm::vec4 current_proj_pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
 
         // Iteramos sobre os inimigos
         for (size_t i = 0; i < g_Enemies.size(); ++i) {
@@ -2054,13 +2052,13 @@ void processCollisions() {
         
         // 1. Define o Raio (Linha de Movimento da Nave)
         Ray trajectoryRay;
-        trajectoryRay.origin = glm::vec3(g_AircraftPosition_Prev); // Posição anterior
+        trajectoryRay.origin = g_AircraftPosition_Prev; // Posição anterior
         
         // Vetor de movimento (posição atual - posição anterior)
-        glm::vec3 movement_vector = glm::vec3(g_AircraftPosition) - glm::vec3(g_AircraftPosition_Prev);
+        glm::vec4 movement_vector = g_AircraftPosition - g_AircraftPosition_Prev;
         
         // Normaliza para obter a direção do raio
-        trajectoryRay.direction = glm::normalize(movement_vector);
+        trajectoryRay.direction = NormalizeVector(movement_vector);
         
         // 2. Define a Esfera (Checkpoint)
         BoundingSphere checkpointSphere = getCheckpointBoundingSphere(g_CheckpointPosition);
@@ -2068,7 +2066,7 @@ void processCollisions() {
         float t_hit; // Distância do ponto de colisão
         float movement_distance = glm::length(movement_vector);
 
-// Realiza o teste RAIO-ESFERA
+        // Realiza o teste RAIO-ESFERA
         if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
             
             // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento
@@ -2089,9 +2087,9 @@ void EnemyShoot(Enemy& enemy) {
     p.t = 0.0f;
     p.speed = 2.0f; 
 
-    glm::vec3 center = glm::vec3(moon_position);       
-    glm::vec3 enemyPos = glm::vec3(enemy.position);
-    glm::vec3 targetPos = glm::vec3(g_AircraftPosition); // O alvo é a nave do jogador
+    glm::vec4 center = moon_position;       
+    glm::vec4 enemyPos = enemy.position;
+    glm::vec4 targetPos = g_AircraftPosition; // O alvo é a nave do jogador
     
     // 1. Definição do P0 (Origem)
     p.p0 = enemyPos;
@@ -2101,7 +2099,7 @@ void EnemyShoot(Enemy& enemy) {
     p.p3 = targetPos; 
 
     // 3. Vetor de Mirada (Direção do Alvo)
-    glm::vec3 directionToTarget = glm::normalize(targetPos - enemyPos);
+    glm::vec4 directionToTarget = NormalizeVector(targetPos - enemyPos);
 
     // 4. Criação dos Pontos de Controle P1 e P2 (para criar o arco)
     // Usamos um arco suave que se curva ligeiramente.
@@ -2110,15 +2108,25 @@ void EnemyShoot(Enemy& enemy) {
     float distance = glm::distance(enemyPos, targetPos);
     
     // P1: Posição intermediária 1/3 do caminho + um pico de altura
-    p.p1 = enemyPos + (directionToTarget * (distance * 0.33f)) + (glm::normalize(enemy.forward) * (curveHeight * 0.5f));
+    p.p1 = enemyPos + (directionToTarget * (distance * 0.33f)) + (NormalizeVector(enemy.forward) * (curveHeight * 0.5f));
 
     // P2: Posição intermediária 2/3 do caminho + um pico de altura
-    p.p2 = enemyPos + (directionToTarget * (distance * 0.66f)) + (glm::normalize(enemy.forward) * (curveHeight * 0.5f));
+    p.p2 = enemyPos + (directionToTarget * (distance * 0.66f)) + (NormalizeVector(enemy.forward) * (curveHeight * 0.5f));
     
-    // Garantir que P1 e P2 fiquem na órbita aproximada da lua
-    p.p1 = glm::normalize(p.p1 - center) * MOON_RADIUS * 1.05f;
-    p.p2 = glm::normalize(p.p2 - center) * MOON_RADIUS * 1.05f;
+    // Otimização: Garantir que P1 e P2 fiquem na órbita aproximada da lua
+    p.p1 = NormalizeVector(p.p1 - center) * MOON_RADIUS * 1.05f;
+    p.p2 = NormalizeVector(p.p2 - center) * MOON_RADIUS * 1.05f;
 
 
     g_Projectiles.push_back(p);
+}
+
+glm::vec4 NormalizeVector(glm::vec4 v) {
+    float n = norm(v);
+
+    v = v / n;
+    
+    v.w = 0.0f; 
+    
+    return v;
 }

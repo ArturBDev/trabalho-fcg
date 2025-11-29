@@ -1,6 +1,6 @@
 #include "collisions.h"
 
-#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/common.hpp> 
@@ -16,8 +16,8 @@ const float CHECKPOINT_RADIUS = 2.5f;
 /**
  * Calcula a distância euclidiana ao quadrado (evita raiz quadrada).
  */
-float distanceSq(const glm::vec3& p1, const glm::vec3& p2) {
-    glm::vec3 diff = p1 - p2;
+float distanceSq(const glm::vec4& p1, const glm::vec4& p2) {
+    glm::vec4 diff = p1 - p2;
     // O produto escalar (dot product) de um vetor por ele mesmo é a norma ao quadrado.
     return glm::dot(diff, diff); 
 }
@@ -37,7 +37,7 @@ bool checkSphereSphereCollision(const BoundingSphere& s1, const BoundingSphere& 
 /**
  * 2. Teste de Intersecção PONTO-ESFERA (Projétil vs. Inimigo)
  */
-bool checkPointSphereCollision(const glm::vec3& point, const BoundingSphere& sphere) {
+bool checkPointSphereCollision(const glm::vec4& point, const BoundingSphere& sphere) {
     float distanceSquared = distanceSq(point, sphere.center); 
     
     float radiusSquared = sphere.radius * sphere.radius;
@@ -50,7 +50,7 @@ bool checkPointSphereCollision(const glm::vec3& point, const BoundingSphere& sph
  */
 bool checkRaySphereCollision(const Ray& ray, const BoundingSphere& sphere, float& t_out) {
     // Vetor do centro do raio (c) para o centro da esfera (s): L = c - s
-    glm::vec3 L = ray.origin - sphere.center;
+    glm::vec4 L = ray.origin - sphere.center;
 
     // A = ||d||^2. Assume-se ray.direction é normalizado, A = 1.0f.
     float A = 1.0f; 
@@ -94,19 +94,19 @@ bool checkRaySphereCollision(const Ray& ray, const BoundingSphere& sphere, float
 
 BoundingSphere getEnemyBoundingSphere(const glm::vec4& enemyPosition) {
     return {
-        glm::vec3(enemyPosition),
+        glm::vec4(enemyPosition),
         AIRCRAFT_SPHERE_RADIUS
     };
 }
 
 BoundingSphere getAircraftBoundingSphere(const glm::vec4& aircraftPosition) {
     return {
-        glm::vec3(aircraftPosition),
+        glm::vec4(aircraftPosition),
         AIRCRAFT_SPHERE_RADIUS
     };
 }
 
-BoundingSphere getCheckpointBoundingSphere(const glm::vec3& checkpointPosition) {
+BoundingSphere getCheckpointBoundingSphere(const glm::vec4& checkpointPosition) {
     return {
         checkpointPosition,
         CHECKPOINT_RADIUS
