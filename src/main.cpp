@@ -192,6 +192,8 @@ void processCollisions();
 void EnemyShoot(Enemy& enemy);
 void moveFreeCamera(float delta_t);
 glm::vec4 NormalizeVector(glm::vec4 v);
+bool isGameOver();
+void resetGame();
 
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
@@ -308,6 +310,9 @@ glm::vec4 g_FreeCameraFront    = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
 bool g_UseFreeCamera = false; 
 float g_FreeCameraYaw = 0.0f;
 float g_FreeCameraPitch = 0.0f;
+
+int g_AircraftLife = 3; 
+bool g_IsGameOver = false;
 
 int main(int argc, char* argv[])
 {
@@ -498,10 +503,13 @@ int main(int argc, char* argv[])
             // Gera a matriz View
             camera_view_vector = camera_lookat_l - camera_position_c;
 
-            moveAircraft(tprev, tnow, g_AircraftPosition);
-            moveEnemies(tprev, tnow);
-            updateProjectiles(tprev, tnow);
-            processCollisions();
+            if (!g_IsGameOver) 
+            {
+                moveAircraft(tprev, tnow, g_AircraftPosition);
+                moveEnemies(tprev, tnow);
+                updateProjectiles(tprev, tnow);
+                processCollisions();
+            }
         }
 
         view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -677,6 +685,20 @@ int main(int argc, char* argv[])
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
         TextRendering_ShowFramesPerSecond(window);
+
+        float pad = TextRendering_LineHeight(window);
+        char buffer[80];
+        
+        if (g_IsGameOver) {
+            TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -0.4f, 0.0f, 2.0f);
+        } else {
+            snprintf(buffer, 80, "Vida: %d", g_AircraftLife);
+            TextRendering_PrintString(window, buffer, -1.0f+pad/10, 1.0f - pad/10 - 0.05f, 1.0f); 
+        }
+
+        if (g_CheckpointReached) {
+            TextRendering_PrintString(window, "CHECKPOINT ALCANCADO!", 0.0f, 0.5f, 1.5f);
+        }
 
         // O framebuffer onde OpenGL executa as operações de renderização não
         // é o mesmo que está sendo mostrado para o usuário, caso contrário
@@ -1458,6 +1480,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     //   Se apertar tecla Z       então g_AngleZ += delta;
     //   Se apertar tecla shift+Z então g_AngleZ -= delta;
 
+    if (key == GLFW_KEY_R && action == GLFW_PRESS){
+        resetGame();
+    }
+
     float delta_translation = 0.1f;
     float delta_rotation = 0.05f; // Rotação para o roll
 
@@ -2184,9 +2210,29 @@ void processCollisions() {
         // Cria a Bounding Sphere do Inimigo
         BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
 
-        if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {
-            printf("CRASH! \n", enemy.id);
-            //falta a logica de game over ou dano
+        for (int i = g_Enemies.size() - 1; i >= 0; --i) {
+            Enemy &enemy = g_Enemies[i];
+            
+            BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
+
+            if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {
+                printf("CRASH! Nave atingida pelo Inimigo %d\n", enemy.id);
+                
+                // Aplica dano (se o jogo ainda não acabou)
+                if (!g_IsGameOver) {
+                    g_AircraftLife -= 1;
+                    printf("Vida restante: %d\n", g_AircraftLife);
+                
+                    // Verifica Game Over
+                    if (isGameOver()) {
+                        printf("GAME OVER! A nave foi destruída.\n");
+                    }
+                }
+
+                // Destrói o inimigo 
+                std::swap(g_Enemies[i], g_Enemies.back());
+                g_Enemies.pop_back(); 
+            }
         }
     }
     
@@ -2319,4 +2365,24 @@ void moveFreeCamera(float delta_t)
         g_FreeCameraPosition += right * cameraSpeed;
         
     g_FreeCameraPosition.w = 1.0f; 
+}
+
+bool isGameOver() {
+    if (g_AircraftLife <= 0 || g_CheckpointReached) {
+        return g_IsGameOver = true;
+    }
+
+    return false;
+}
+
+void resetGame() {
+    g_AircraftLife = 3;
+    g_CheckpointReached = false;
+    g_IsGameOver = false;
+    g_Enemies.clear();
+    g_Projectiles.clear();
+    g_AircraftPosition = glm::vec4(0.0f, 0.0f, MOON_RADIUS + 2.0f, 1.0f);
+    g_AircraftPosition_Prev = g_AircraftPosition;
+    g_AircraftForward = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+    InitEnemies();
 }
