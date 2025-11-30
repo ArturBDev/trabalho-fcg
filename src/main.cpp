@@ -190,6 +190,7 @@ glm::vec4 evaluateBezierTangent(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::v
 void updateProjectiles(float tprev, float tnow);
 void processCollisions();
 void EnemyShoot(Enemy& enemy);
+void moveFreeCamera(float delta_t);
 glm::vec4 NormalizeVector(glm::vec4 v);
 
 
@@ -282,6 +283,7 @@ std::vector<Projectile> g_Projectiles;
 float isWPressed = false;
 float isAPressed = false;
 float isDPressed = false;
+float isSPressed = false;
 
 // Variaveis de posição da lua
 glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -299,6 +301,13 @@ const float minAngleToShoot = 0.90f; // Aproximadamente 25 graus de tolerância
 
 const float turnRate = 2.0f; // Velocidade máxima de giro (em radianos/segundo)
 const float enemySpeed = 5.0f; // Velocidade do inimigo
+
+// Variaveis globais de controle da Câmera Livre
+glm::vec4 g_FreeCameraPosition = glm::vec4(0.0f, 10.0f, 0.0f, 1.0f); 
+glm::vec4 g_FreeCameraFront    = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);  
+bool g_UseFreeCamera = false; 
+float g_FreeCameraYaw = 0.0f;
+float g_FreeCameraPitch = 0.0f;
 
 int main(int argc, char* argv[])
 {
@@ -438,41 +447,58 @@ int main(int argc, char* argv[])
         glm::mat4 model = Matrix_Identity(); 
         glm::mat4 aircraft = Matrix_Identity(); 
 
-        glm::vec4 ship_pos = glm::vec4(g_AircraftPosition);
-        glm::vec4 center   = glm::vec4(moon_position);
+        glm::mat4 view;
+        glm::vec4 camera_position_c;
+        glm::vec4 camera_up_vector;
+        glm::vec4 up_vec;
+        glm::vec4 front_vec;
+        glm::vec4 right_vec;
+        glm::vec4 camera_lookat_l;
+        glm::vec4 camera_view_vector;
 
-        glm::vec4 up_vec = (ship_pos - center); up_vec.w = 0.0f; 
-        up_vec = up_vec / norm(up_vec);
-        glm::vec4 front_vec = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
-            
-        // Atualizamos a global para evitar drift 
-        g_AircraftForward = front_vec; 
+        if (g_UseFreeCamera)
+        {
+            // Câmera Livre
+            camera_position_c = g_FreeCameraPosition; 
+            camera_view_vector = g_FreeCameraFront;          
+            camera_up_vector  = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); 
+        }
+        else
+        {
+            up_vec = NormalizeVector(g_AircraftPosition - moon_position);
+            front_vec = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
+                
+            // Atualizamos a global para evitar drift 
+            g_AircraftForward = front_vec; 
 
-        glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, front_vec));  
+            right_vec = NormalizeVector(crossproduct(up_vec, front_vec));  
 
-        // O ponto para onde a câmera olha (LookAt) é a própria nave
-        glm::vec4 camera_lookat_l = g_AircraftPosition;
+            // O ponto para onde a câmera olha (LookAt) é a própria nave
+            camera_lookat_l = g_AircraftPosition;
 
-        // Calculamos o deslocamento local baseado no mouse (Theta/Phi) e Distância
-        float r = g_CameraDistance;
-        float offset_y_local = r * sin(g_CameraPhi);                  // Altura relativa à nave
-        float offset_x_local = r * cos(g_CameraPhi) * sin(g_CameraTheta); // Lado relativo
-        float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
+            // Calculamos o deslocamento local baseado no mouse (Theta/Phi) e Distância
+            float r = g_CameraDistance;
+            float offset_y_local = r * sin(g_CameraPhi);                  // Altura relativa à nave
+            float offset_x_local = r * cos(g_CameraPhi) * sin(g_CameraTheta); // Lado relativo
+            float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
 
-        // usando os vetores da nave (Right, Up, Front) como base.
-        glm::vec4 final_offset = (right_vec * offset_x_local) + 
-                                (up_vec    * offset_y_local) + 
-                                (front_vec * offset_z_local);
+            // usando os vetores da nave (Right, Up, Front) como base.
+            glm::vec4 final_offset = (right_vec * offset_x_local) + 
+                                    (up_vec    * offset_y_local) + 
+                                    (front_vec * offset_z_local);
 
-        // A posição da câmera é: Posição da Nave - Deslocamento Calculado
-        glm::vec4 camera_position_c = camera_lookat_l - final_offset;
+            // A posição da câmera é: Posição da Nave - Deslocamento Calculado
+            camera_position_c = camera_lookat_l - final_offset;
 
-        // O vetor "Cima" da câmera agora deve ser a normal da Lua, não o Y global (0,1,0)
-        glm::vec4 camera_up_vector = up_vec;
+            // O vetor "Cima" da câmera agora deve ser a normal da Lua, não o Y global (0,1,0)
+            camera_up_vector = up_vec;
 
-        // Gera a matriz View
-        glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c;
-        glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
+            // Gera a matriz View
+            camera_view_vector = camera_lookat_l - camera_position_c;
+        }
+
+        view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
+
             
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
@@ -550,7 +576,7 @@ int main(int argc, char* argv[])
         // Loop para desenhar TODOS os inimigos
         for (const auto &enemy : g_Enemies) {
             glm::vec4 enemy_pos = enemy.position;
-            glm::vec4 up_e = NormalizeVector(enemy_pos - center);
+            glm::vec4 up_e = NormalizeVector(enemy_pos - moon_position);
             glm::vec4 front_e = enemy.forward;
             glm::vec4 right_e = NormalizeVector(crossproduct(up_e, front_e));
             // Matriz de alinhamento (LookAt inverso) para o modelo virar corretamente
@@ -630,7 +656,15 @@ int main(int argc, char* argv[])
         gouraud = false;
         glUniform1i(g_gouraud_uniform, gouraud);
 
-        moveAircraft(tprev, tnow, g_AircraftPosition);
+        if (g_UseFreeCamera)
+        {
+            moveFreeCamera(tnow - tprev); 
+        }
+        else
+        {
+            moveAircraft(tprev, tnow, g_AircraftPosition);
+        }
+
         moveEnemies(tprev, tnow); 
         updateProjectiles(tprev, tnow); 
 
@@ -1477,6 +1511,19 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             ;
     }
 
+    if(key == GLFW_KEY_S)
+    {
+        if (action == GLFW_PRESS)
+            // Usuário apertou a tecla S, então atualizamos o estado para pressionada
+            isSPressed = true;
+        else if (action == GLFW_RELEASE)
+            // Usuário largou a tecla S, então atualizamos o estado para NÃO pressionada
+            isSPressed = false;
+
+        else if (action == GLFW_REPEAT)
+            ;
+    }
+
     if (key == GLFW_KEY_SPACE) {
         if (action == GLFW_PRESS && !isSpacePressed) {
             Shoot();
@@ -1487,22 +1534,20 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         }
     }
 
-    // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
-    if (key == GLFW_KEY_P && action == GLFW_PRESS)
+    if (key == GLFW_KEY_C && action == GLFW_PRESS)
     {
-        g_UsePerspectiveProjection = true;
-    }
-
-    // Se o usuário apertar a tecla O, utilizamos projeção ortográfica.
-    if (key == GLFW_KEY_O && action == GLFW_PRESS)
-    {
-        g_UsePerspectiveProjection = false;
-    }
-
-    // Se o usuário apertar a tecla H, fazemos um "toggle" do texto informativo mostrado na tela.
-    if (key == GLFW_KEY_H && action == GLFW_PRESS)
-    {
-        g_ShowInfoText = !g_ShowInfoText;
+        g_UseFreeCamera = !g_UseFreeCamera;
+    
+        // Se mudou para a câmera livre, inicializa sua posição na posição da aeronave
+        if (g_UseFreeCamera)
+        {
+            float g_CameraDistance = 5.0f; 
+            g_FreeCameraPosition = g_AircraftPosition - g_AircraftForward * g_CameraDistance + glm::vec4(0.0f, 0.5f, 0.0f, 0.0f);
+            
+            g_FreeCameraPosition.w = 1.0f; 
+            
+            g_FreeCameraFront = NormalizeVector(g_AircraftForward);
+        }
     }
 
     // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
@@ -2241,4 +2286,43 @@ glm::vec4 NormalizeVector(glm::vec4 v) {
     v.w = 0.0f; 
     
     return v;
+}
+
+void moveFreeCamera(float delta_t)
+{
+    float cameraSpeed = 10.0f * delta_t; 
+
+    g_FreeCameraYaw = -glm::degrees(g_CameraTheta) + 90.0f;
+    g_FreeCameraPitch = glm::degrees(g_CameraPhi);
+    
+    if (g_FreeCameraPitch > 89.0f)
+        g_FreeCameraPitch = 89.0f;
+    if (g_FreeCameraPitch < -89.0f)
+        g_FreeCameraPitch = -89.0f;
+        
+    float yaw_rad = glm::radians(g_FreeCameraYaw);
+    float pitch_rad = glm::radians(g_FreeCameraPitch);
+    
+    glm::vec4 front;
+    front.x = cos(yaw_rad) * cos(pitch_rad);
+    front.y = sin(pitch_rad);
+    front.z = sin(yaw_rad) * cos(pitch_rad);
+    front.w = 0.0f;
+    g_FreeCameraFront = NormalizeVector(front);
+
+    glm::vec4 up_global = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); 
+    glm::vec4 right = NormalizeVector(crossproduct(up_global, g_FreeCameraFront)); 
+
+    // Movimento para frente/trás (W/S) - Usa o vetor Front
+    if (isWPressed)
+        g_FreeCameraPosition += g_FreeCameraFront * cameraSpeed;
+    if (isSPressed)
+        g_FreeCameraPosition -= g_FreeCameraFront * cameraSpeed;
+
+    if (isDPressed) // D para Right
+        g_FreeCameraPosition -= right * cameraSpeed;
+    if (isAPressed) // A para Left
+        g_FreeCameraPosition += right * cameraSpeed;
+        
+    g_FreeCameraPosition.w = 1.0f; 
 }
