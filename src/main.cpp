@@ -261,6 +261,8 @@ GLint g_projection_uniform;
 GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
+GLint g_gouraud_uniform;
+
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
@@ -407,6 +409,9 @@ int main(int argc, char* argv[])
     // Inicializa inimigos 
     InitEnemies();
 
+    bool gouraud = false;
+
+
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -523,6 +528,9 @@ int main(int argc, char* argv[])
         rotation_align[1] = up_vec;    // Coluna 1: Eixo Y (Up)
         rotation_align[2] = front_vec; // Coluna 2: Eixo Z (Front)
 
+        gouraud = false;
+        glUniform1i(g_gouraud_uniform, gouraud);
+
         // Desenhamos o modelo da nave
         aircraft =  Matrix_Translate(g_AircraftPosition.x, g_AircraftPosition.y, g_AircraftPosition.z)
          * rotation_align
@@ -610,11 +618,17 @@ int main(int argc, char* argv[])
             DrawVirtualObject("the_sphere"); 
         }
 
+        gouraud = true;
+        glUniform1i(g_gouraud_uniform, gouraud);
+
         // Desenhamos o plano do chão (lua)
         model = Matrix_Translate(moon_position.x, moon_position.y, moon_position.z) * Matrix_Scale(15.0f/60.0f, 15.0f/60.0f, 15.0f/60.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_sphere");
+
+        gouraud = false;
+        glUniform1i(g_gouraud_uniform, gouraud);
 
         moveAircraft(tprev, tnow, g_AircraftPosition);
         moveEnemies(tprev, tnow); 

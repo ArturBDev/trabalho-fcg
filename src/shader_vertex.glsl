@@ -11,6 +11,8 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+uniform bool gouraud;
+
 // Atributos de vértice que serão gerados como saída ("out") pelo Vertex Shader.
 // ** Estes serão interpolados pelo rasterizador! ** gerando, assim, valores
 // para cada fragmento, os quais serão recebidos como entrada pelo Fragment
@@ -19,6 +21,7 @@ out vec4 position_world;
 out vec4 position_model;
 out vec4 normal;
 out vec2 texcoords;
+out vec4 color_v;
 
 void main()
 {
@@ -63,5 +66,58 @@ void main()
 
     // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
     texcoords = texture_coefficients;
-}
 
+    // Gourad
+    if(gouraud){
+
+        // Obtemos a posição da câmera utilizando a inversa da matriz que define o
+        // sistema de coordenadas da câmera.
+        vec4 origin = vec4(0.0, 0.0, 0.0, 1.0);
+        vec4 camera_position = inverse(view) * origin;
+
+        // Este ponto, p, possui uma posição no
+        // sistema de coordenadas global (World coordinates). Esta posição é obtida
+        // através da interpolação, feita pelo rasterizador, da posição de cada
+        // vértice.
+        vec4 p = position_world;
+
+        // Normal do fragmento atual, interpolada pelo rasterizador a partir das
+        // normais de cada vértice.
+        vec4 n = normalize(normal);
+
+        // Vetor que define o sentido da fonte de luz em relação ao ponto atual.
+        vec4 l = normalize(vec4(1.0,1.0,0.0,0.0));
+
+        // Vetor que define o sentido da câmera em relação ao ponto atual.
+        vec4 v = normalize(camera_position - p);
+
+        // Vetor que define o sentido da reflexão especular ideal.
+        // vec4 r = vec4(0.0,0.0,0.0,0.0); 
+        vec4 r = normalize(-l + 2 * n * dot(n, l));
+
+        vec3 Kd = vec3(0.1, 0.1, 0.1); // Refletância difusa
+        vec3 Ks = vec3(0.3, 0.3, 0.3);// Refletância especular
+        vec3 Ka = vec3(0.1, 0.1, 0.1); // Refletância ambiente
+        float q = 20.0; // Expoente especular para o modelo de iluminação de Phong
+
+        // Espectro da fonte de iluminação
+        vec3 I = vec3(1.0, 1.0, 1.0);       
+        vec3 Ia = vec3(0.1, 0.1, 0.1); 
+
+        // Termo difuso utilizando a lei dos cossenos de Lambert
+        vec3 lambert_diffuse_term = Kd * I * max(0, dot(n, l));
+
+        // Termo ambiente
+        vec3 ambient_term = Ka * Ia;
+
+        // Termo especular utilizando o modelo de iluminação de Blinn-Phong/Phong 
+        vec4 h = normalize(v + l);
+        vec3 specular_term  = Ks * I * pow(max(0, dot(h, n)), q); 
+
+        color_v.a = 1;
+
+        // Combinação dos termos de iluminação
+        color_v.rgb = lambert_diffuse_term + ambient_term + specular_term;
+    }
+
+}
