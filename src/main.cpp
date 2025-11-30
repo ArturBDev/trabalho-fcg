@@ -2281,6 +2281,7 @@ glm::vec4 NormalizeVector(glm::vec4 v) {
     return v;
 }
 
+// FONTE: https://learnopengl.com/Getting-started/Camera
 void moveFreeCamera(float delta_t)
 {
     float cameraSpeed = 10.0f * delta_t; 
