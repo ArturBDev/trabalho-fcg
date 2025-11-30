@@ -465,6 +465,19 @@ int main(int argc, char* argv[])
         {
             // Câmera Livre
             camera_position_c = g_FreeCameraPosition; 
+
+            glm::vec4 vector_to_center = camera_position_c - moon_position;
+            vector_to_center.w = 0.0f;
+            float current_distance = norm(vector_to_center);
+            float min_allowed_distance = MOON_RADIUS;
+
+            if (current_distance < min_allowed_distance)
+            {
+                glm::vec4 direction_from_center = NormalizeVector(vector_to_center);
+                camera_position_c = moon_position + direction_from_center * min_allowed_distance;
+                camera_position_c.w = 1.0f;
+            }
+
             camera_view_vector = g_FreeCameraFront;          
             camera_up_vector  = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); 
 
@@ -2330,7 +2343,7 @@ glm::vec4 NormalizeVector(glm::vec4 v) {
 // FONTE: https://learnopengl.com/Getting-started/Camera
 void moveFreeCamera(float delta_t)
 {
-    float cameraSpeed = 10.0f * delta_t; 
+    float cameraSpeed = 5.0f * delta_t; 
 
     g_FreeCameraYaw = -glm::degrees(g_CameraTheta) + 90.0f;
     g_FreeCameraPitch = glm::degrees(g_CameraPhi);
@@ -2352,19 +2365,31 @@ void moveFreeCamera(float delta_t)
 
     glm::vec4 up_global = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); 
     glm::vec4 right = NormalizeVector(crossproduct(up_global, g_FreeCameraFront)); 
+    
+    glm::vec4 next_camera_position = g_FreeCameraPosition; 
 
-    // Movimento para frente/trás (W/S) - Usa o vetor Front
     if (isWPressed)
-        g_FreeCameraPosition += g_FreeCameraFront * cameraSpeed;
+        next_camera_position += g_FreeCameraFront * cameraSpeed;
     if (isSPressed)
-        g_FreeCameraPosition -= g_FreeCameraFront * cameraSpeed;
+        next_camera_position -= g_FreeCameraFront * cameraSpeed;
 
     if (isDPressed) // D para Right
-        g_FreeCameraPosition -= right * cameraSpeed;
+        next_camera_position -= right * cameraSpeed;
     if (isAPressed) // A para Left
-        g_FreeCameraPosition += right * cameraSpeed;
-        
-    g_FreeCameraPosition.w = 1.0f; 
+        next_camera_position += right * cameraSpeed;
+    
+    glm::vec4 center = moon_position;
+    glm::vec4 vector_to_center = next_camera_position - center;
+    vector_to_center.w = 0.0f;
+    float current_distance = norm(vector_to_center);
+    float min_allowed_distance = MOON_RADIUS;
+
+    if (current_distance >= min_allowed_distance)
+    {
+        g_FreeCameraPosition = next_camera_position;
+    }
+
+    g_FreeCameraPosition.w = 1.0f;
 }
 
 bool isGameOver() {
