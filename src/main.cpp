@@ -432,43 +432,43 @@ int main(int argc, char* argv[])
 
         glm::mat4 model = Matrix_Identity(); 
         glm::mat4 aircraft = Matrix_Identity(); 
-        
+
         glm::vec4 ship_pos = glm::vec4(g_AircraftPosition);
         glm::vec4 center   = glm::vec4(moon_position);
 
         glm::vec4 up_vec = (ship_pos - center); up_vec.w = 0.0f; 
         up_vec = up_vec / norm(up_vec);
         glm::vec4 front_vec = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
-        
-        // Atualizamos a global para evitar drift 
-        g_AircraftForward = front_vec; 
+            
+            // Atualizamos a global para evitar drift 
+            g_AircraftForward = front_vec; 
 
-        glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, front_vec));  
+            glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, front_vec));  
 
-        // O ponto para onde a câmera olha (LookAt) é a própria nave
-        glm::vec4 camera_lookat_l = g_AircraftPosition;
+            // O ponto para onde a câmera olha (LookAt) é a própria nave
+            glm::vec4 camera_lookat_l = g_AircraftPosition;
 
-        // Calculamos o deslocamento local baseado no mouse (Theta/Phi) e Distância
-        float r = g_CameraDistance;
-        float offset_y_local = r * sin(g_CameraPhi);                  // Altura relativa à nave
-        float offset_x_local = r * cos(g_CameraPhi) * sin(g_CameraTheta); // Lado relativo
-        float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
+            // Calculamos o deslocamento local baseado no mouse (Theta/Phi) e Distância
+            float r = g_CameraDistance;
+            float offset_y_local = r * sin(g_CameraPhi);                  // Altura relativa à nave
+            float offset_x_local = r * cos(g_CameraPhi) * sin(g_CameraTheta); // Lado relativo
+            float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
 
-        // usando os vetores da nave (Right, Up, Front) como base.
-        glm::vec4 final_offset = (right_vec * offset_x_local) + 
-                                 (up_vec    * offset_y_local) + 
-                                 (front_vec * offset_z_local);
+            // usando os vetores da nave (Right, Up, Front) como base.
+            glm::vec4 final_offset = (right_vec * offset_x_local) + 
+                                    (up_vec    * offset_y_local) + 
+                                    (front_vec * offset_z_local);
 
-        // A posição da câmera é: Posição da Nave - Deslocamento Calculado
-        glm::vec4 camera_position_c = camera_lookat_l - final_offset;
+            // A posição da câmera é: Posição da Nave - Deslocamento Calculado
+            glm::vec4 camera_position_c = camera_lookat_l - final_offset;
 
-        // O vetor "Cima" da câmera agora deve ser a normal da Lua, não o Y global (0,1,0)
-        glm::vec4 camera_up_vector = up_vec;
+            // O vetor "Cima" da câmera agora deve ser a normal da Lua, não o Y global (0,1,0)
+            glm::vec4 camera_up_vector = up_vec;
 
-        // Gera a matriz View
-        glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c;
-        glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
-
+            // Gera a matriz View
+            glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c;
+            glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
+            
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
@@ -2073,13 +2073,15 @@ void processCollisions() {
                 glm::vec4 center = moon_position;
 
                 // Reprojetar E1
-                glm::vec4 dir1 = e1.position - center; dir1.w = 0.0f;
-                e1.position = center + (dir1 / norm(dir1) * fixedDistance);
+                glm::vec4 dir1 = NormalizeVector(e1.position - center);
+                dir1.w = 0.0f;
+                e1.position = center + (dir1 * fixedDistance);
                 e1.position.w = 1.0f;
 
                 // Reprojetar E2
-                glm::vec4 dir2 = e2.position - center; dir2.w = 0.0f;
-                e2.position = center + (dir2 / norm(dir2) * fixedDistance);
+                glm::vec4 dir2 = NormalizeVector(e2.position - center);
+                dir2.w = 0.0f;
+                e2.position = center + (dir2 * fixedDistance);
                 e2.position.w = 1.0f;
             }
         }
