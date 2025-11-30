@@ -462,6 +462,8 @@ int main(int argc, char* argv[])
             camera_position_c = g_FreeCameraPosition; 
             camera_view_vector = g_FreeCameraFront;          
             camera_up_vector  = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); 
+
+            moveFreeCamera(tnow - tprev);
         }
         else
         {
@@ -495,6 +497,11 @@ int main(int argc, char* argv[])
 
             // Gera a matriz View
             camera_view_vector = camera_lookat_l - camera_position_c;
+
+            moveAircraft(tprev, tnow, g_AircraftPosition);
+            moveEnemies(tprev, tnow);
+            updateProjectiles(tprev, tnow);
+            processCollisions();
         }
 
         view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -655,20 +662,6 @@ int main(int argc, char* argv[])
 
         gouraud = false;
         glUniform1i(g_gouraud_uniform, gouraud);
-
-        if (g_UseFreeCamera)
-        {
-            moveFreeCamera(tnow - tprev); 
-        }
-        else
-        {
-            moveAircraft(tprev, tnow, g_AircraftPosition);
-        }
-
-        moveEnemies(tprev, tnow); 
-        updateProjectiles(tprev, tnow); 
-
-        processCollisions(); 
 
         g_AircraftPosition_Prev = g_AircraftPosition; 
 
