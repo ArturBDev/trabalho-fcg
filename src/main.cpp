@@ -194,6 +194,7 @@ void moveFreeCamera(float delta_t);
 glm::vec4 NormalizeVector(glm::vec4 v);
 bool isGameOver();
 void resetGame();
+void showText(GLFWwindow* window);
 
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
@@ -662,7 +663,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        if (!g_CheckpointReached) 
+        if (!g_CheckpointReached && g_Enemies.empty()) 
         {
             glm::mat4 checkpoint_model = Matrix_Translate(g_CheckpointPosition.x, g_CheckpointPosition.y, g_CheckpointPosition.z)
                                     * Matrix_Scale(0.25f/15.0f, 0.25f/15.0f, 0.25f/15.0f); // Use um fator de escala visível (ex: 2.5)
@@ -688,37 +689,10 @@ int main(int argc, char* argv[])
 
         tprev = tnow;
 
+        showText(window);
 
-        float pad = TextRendering_LineHeight(window);
-        char buffer[80];
+
         
-        float margin_x = 0.05f;
-        float margin_y_top = 0.05f;
-        float margin_y_bottom = 0.95f; 
-        
-        if (g_IsGameOver) {
-            // Centralizado na tela
-            TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -0.4f, 0.0f, 2.0f);
-            TextRendering_PrintString(window, "Pressione R para reiniciar", -0.3f, -0.1f, 1.5f);
-        } else {
-            snprintf(buffer, 80, "Vida: %d", g_AircraftLife);
-            float est_width = 15.0f * TextRendering_CharWidth(window);
-            
-            TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
-            float current_y = -1.0f + margin_y_top; // Começa na margem inferior, subindo.
-
-            TextRendering_PrintString(window, "Pressione ESC para sair", -1.0f + margin_x, current_y, 1.0f);
-            current_y += pad; // Move para cima para a próxima linha
-            
-            TextRendering_PrintString(window, "C para alternar câmera livre", -1.0f + margin_x, current_y, 1.0f);
-            current_y += pad;
-            
-            TextRendering_PrintString(window, "Espaço para atirar", -1.0f + margin_x, current_y, 1.0f);
-            current_y += pad;
-
-            TextRendering_PrintString(window, "Use W,A,S,D para mover a aeronave", -1.0f + margin_x, current_y, 1.0f);
-            current_y += pad;
-        }
 
         // O framebuffer onde OpenGL executa as operações de renderização não
         // é o mesmo que está sendo mostrado para o usuário, caso contrário
@@ -2444,4 +2418,39 @@ void resetGame() {
     g_AircraftPosition_Prev = g_AircraftPosition;
     g_AircraftForward = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
     InitEnemies();
+}
+
+void showText(GLFWwindow* window){
+    float pad = TextRendering_LineHeight(window);
+    char buffer[80];
+    
+    float margin_x = 0.05f;
+    float margin_y_top = 0.05f;
+    float margin_y_bottom = 0.95f; 
+    
+    if (g_AircraftLife <= 0) {
+        TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -0.4f, 0.0f, 2.0f);
+        TextRendering_PrintString(window, "Pressione R para reiniciar", -0.3f, -0.1f, 1.5f);
+    } else if (g_CheckpointReached) {
+        TextRendering_PrintString(window, "PARABÉNS! VOCÊ VENCEU! (Pressione ESC para sair)", -0.5f, 0.0f, 2.0f);
+        TextRendering_PrintString(window, "Pressione R para reiniciar", -0.3f, -0.1f, 1.5f);
+    } else if (!g_IsGameOver) {
+        snprintf(buffer, 80, "Vida: %d", g_AircraftLife);
+        float est_width = 15.0f * TextRendering_CharWidth(window);
+        
+        TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
+        float current_y = -1.0f + margin_y_top; // Começa na margem inferior, subindo.
+
+        TextRendering_PrintString(window, "Pressione ESC para sair", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad; // Move para cima para a próxima linha
+        
+        TextRendering_PrintString(window, "C para alternar câmera livre", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
+        
+        TextRendering_PrintString(window, "Espaço para atirar", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
+
+        TextRendering_PrintString(window, "Use W,A,S,D para mover a aeronave", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
+    }
 }
