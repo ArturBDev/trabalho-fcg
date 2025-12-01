@@ -1384,13 +1384,15 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         g_CameraTheta -= 0.01f*dx;
         g_CameraPhi   += 0.01f*dy;
     
-        // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
-        float phimax = 3.141592f/2;
-        float phimin = -phimax;
-    
+        const float angle_limit = 3.141592f/2.0f; // 90 graus
+        const float epsilon_angle = 0.1f;         // 5 a 6 graus de buffer 
+        
+        float phimax = angle_limit - epsilon_angle;
+        float phimin = -angle_limit + epsilon_angle;
+        
         if (g_CameraPhi > phimax)
             g_CameraPhi = phimax;
-    
+
         if (g_CameraPhi < phimin)
             g_CameraPhi = phimin;
     
@@ -2250,7 +2252,7 @@ void processCollisions() {
         if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
             
             // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento
-            if (t_hit >= 0.0f && t_hit <= movement_distance) { 
+            if (t_hit >= 0.0f && t_hit <= movement_distance && g_Enemies.empty()) { 
                 if (!g_CheckpointReached) {
                     g_CheckpointReached = true;
                     printf("CHECKPOINT REACHED!\n", t_hit);
