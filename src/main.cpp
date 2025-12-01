@@ -128,14 +128,6 @@ struct Enemy {
     glm::vec4 forward;      // Para onde ele está olhando/indo
     float speed;            // Velocidade de movimento
     float changeDirTimer;   // Tempo até a próxima mudança de direção aleatória
-    float shootTimer;       // <-- NOVO: Tempo até o próximo tiro
-};
-
-struct Projectile {
-    glm::vec4 p0, p1, p2, p3; // Pontos de controle da Bézier
-    float t;                  // Tempo (0.0 a 1.0)
-    float speed;              // Velocidade da animação
-    bool active;              // Se deve ser desenhado ou não
 };
 
 
@@ -187,17 +179,15 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position);
 float randomFloat(float min, float max);
 void InitEnemies();
 void moveEnemies(float tprev, float tnow);
-void Shoot();
 glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t);
 glm::vec4 evaluateBezierTangent(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t);
-void updateProjectiles(float tprev, float tnow);
 void processCollisions();
-void EnemyShoot(Enemy& enemy);
 void moveFreeCamera(float delta_t);
 glm::vec4 NormalizeVector(glm::vec4 v);
 bool isGameOver();
 void resetGame();
 void showText(GLFWwindow* window);
+void initCheckpoints();
 
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
@@ -274,16 +264,13 @@ GLint g_gouraud_uniform;
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
 
-// Variáveis que controlam a posição da aeronave no mundo.
-glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 16.0f, 0.0f, 1.0f);
-glm::vec4 g_AircraftForward = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f); 
+// Variáveis que controlam a posição da aeronave no mundo
+glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 0.0f, 16.0f, 1.0f);
+glm::vec4 g_AircraftForward = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 glm::vec4 g_AircraftPosition_Prev = glm::vec4(g_AircraftPosition); // Inicializa com a posição inicial.
 
 // Lista global de inimigos
 std::vector<Enemy> g_Enemies;
-
-// Lista de tiros
-std::vector<Projectile> g_Projectiles;
 
 // Flags para controle de movimento 
 float isWPressed = false;
@@ -295,16 +282,7 @@ float isIPressed = false;
 // Variaveis de posição da lua
 glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-// Trava para não metralhar ao segurar espaço
-bool isSpacePressed = false;
-
-glm::vec4 g_CheckpointPosition = glm::vec4(0.0f, 0.0f, -16.0f, 1.0f);
-
-bool g_CheckpointReached = false;
-
-const float enemyRange = 25.0f; // Distância máxima para o inimigo atirar
-
-const float minAngleToShoot = 0.90f; // Aproximadamente 25 graus de tolerância
+std::vector<glm::vec4> g_Checkpoints; // Posições dos 5 Checkpoints
 
 const float turnRate = 2.0f; // Velocidade máxima de giro (em radianos/segundo)
 const float enemySpeed = 5.0f; // Velocidade do inimigo
@@ -428,6 +406,8 @@ int main(int argc, char* argv[])
     // Inicializa inimigos 
     InitEnemies();
 
+    initCheckpoints(); // << ADICIONADO
+
     bool gouraud = false;
 
 
@@ -525,7 +505,6 @@ int main(int argc, char* argv[])
             {
                 moveAircraft(tprev, tnow, g_AircraftPosition);
                 moveEnemies(tprev, tnow);
-                updateProjectiles(tprev, tnow);
                 processCollisions();
             }
         }
@@ -632,48 +611,14 @@ int main(int argc, char* argv[])
             }
         }
 
-        for (const auto &proj : g_Projectiles) {
-            if (!proj.active) continue;
 
-            // Calcula Posição e Rotação na Curva
-            glm::vec4 pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
-            glm::vec4 tangent = evaluateBezierTangent(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
-
-            // Cria Matriz de Rotação (Alinha o míssil com a tangente)
-            glm::vec4 up_aux = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
-            if (fabs(tangent.y) > 0.99f) up_aux = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-            
-            glm::vec4 right_proj = NormalizeVector(crossproduct(up_aux, tangent));
-            glm::vec4 up_proj = NormalizeVector(crossproduct(tangent, right_proj));
-
-            glm::mat4 rotation_align = glm::mat4(1.0f);
-            rotation_align[0] = right_proj;
-            rotation_align[1] = up_proj;
-            rotation_align[2] = tangent;
-
-            model = Matrix_Translate(pos.x, pos.y, pos.z)
-                  * rotation_align
-                  * Matrix_Scale(0.1f, 0.1f, 0.1f) 
-                  * Matrix_Rotate_Y(M_PI);         
-
-            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-            glUniform1i(g_object_id_uniform, AIRCRAFT); // Usa textura da nave
-
-            for (size_t i = 0; i < aircraft_model.shapes.size(); i++) {
-                if (aircraft_model.shapes[i].name == "R-40TL") {
-                    DrawVirtualObject(aircraft_model.shapes[i].name.c_str());
-                    break;
-                }
-            }
-        }
-
-        if (!g_CheckpointReached && g_Enemies.empty()) 
+        for (const auto &checkpoint_pos : g_Checkpoints)
         {
-            glm::mat4 checkpoint_model = Matrix_Translate(g_CheckpointPosition.x, g_CheckpointPosition.y, g_CheckpointPosition.z)
-                                    * Matrix_Scale(0.25f/15.0f, 0.25f/15.0f, 0.25f/15.0f); // Use um fator de escala visível (ex: 2.5)
+            glm::mat4 checkpoint_model = Matrix_Translate(checkpoint_pos.x, checkpoint_pos.y, checkpoint_pos.z)
+                                    * Matrix_Scale(0.25f/15.0f, 0.25f/15.0f, 0.25f/15.0f); 
                                     
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(checkpoint_model));
-            glUniform1i(g_object_id_uniform, CHECKPOINT_SPHERE); // Usa o novo ID (7)
+            glUniform1i(g_object_id_uniform, CHECKPOINT_SPHERE); 
             DrawVirtualObject("the_sphere"); 
         }
 
@@ -689,7 +634,7 @@ int main(int argc, char* argv[])
         gouraud = false;
         glUniform1i(g_gouraud_uniform, gouraud);
 
-        if (g_AircraftLife > 0 && !g_CheckpointReached)
+        if (g_AircraftLife > 0)
         {
             // Desativamos testes 3D (Z-buffer e Culling) para desenhar o HUD em 2D
             glDisable(GL_DEPTH_TEST);
@@ -1601,19 +1546,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             isIPressed = !isIPressed;
     }
 
-
-    if (key == GLFW_KEY_SPACE) {
-        if (action == GLFW_PRESS && !isSpacePressed) {
-            if(isIPressed){
-                Shoot();
-            }
-            isSpacePressed = true;
-        }
-        if (action == GLFW_RELEASE) {
-            isSpacePressed = false;
-        }
-    }
-
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
     {
         g_UseFreeCamera = !g_UseFreeCamera;
@@ -2014,7 +1946,6 @@ void InitEnemies() {
         
         e.speed = 5.0f;
         e.changeDirTimer = randomFloat(1.0f, 3.0f); 
-        e.shootTimer = randomFloat(2.0f, 5.0f); 
         
         g_Enemies.push_back(e);
     }
@@ -2076,64 +2007,9 @@ void moveEnemies(float tprev, float tnow) {
         finalDir = NormalizeVector(finalDir);
         enemy.position = moon_position + (finalDir * fixedDistance);
         enemy.position.w = 1.0f; 
-
-        enemy.shootTimer -= delta_t;
-
-        if (enemy.shootTimer <= 0.0f) {            
-            float distance_to_aircraft = norm(vector_to_target);
-            
-            if (distance_to_aircraft < enemyRange) { 
-                
-                glm::vec4 normalized_direction_to_target = vector_to_target / distance_to_aircraft;
-                float alignment = dotproduct(enemy.forward, normalized_direction_to_target);
-                
-                if (alignment > minAngleToShoot) {
-                    EnemyShoot(enemy);
-                    enemy.shootTimer = randomFloat(3.0f, 6.0f); 
-                } else {
-                    enemy.shootTimer = 0.5f; 
-                }
-            } else {
-                enemy.shootTimer = 1.0f; 
-            }
-        }
     }
 }
 
-void Shoot() {
-    if(g_AircraftLife <= 0 || g_CheckpointReached) return;
-
-    Projectile p;
-    p.active = true;
-    p.t = 0.0f;
-    p.speed = 1.5f; 
-    
-    // Vetores de Referência
-    glm::vec4 up = NormalizeVector(g_AircraftPosition - moon_position); 
-    glm::vec4 forward = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up) * up);
-    glm::vec4 right = NormalizeVector(crossproduct(up, forward));
-
-    float orbit_angle = 1.0f;        // Distância do tiro (em radianos)
-    float height_multiplier = 1.1f;  // Altura do arco 
-
-    // P0: O TIRO SAI DO CENTRO DA NAVE 
-    p.p0 = g_AircraftPosition;
-
-    // P1: 1/3 do caminho (Rotaciona e sobe)
-    glm::mat4 rot1 = Matrix_Rotate(orbit_angle * 0.33f, right);
-    glm::vec4 vec_p1 = rot1 * (p.p0 - moon_position);
-    p.p1 = moon_position + (vec_p1 * height_multiplier);
-
-    // P2: 2/3 do caminho (Rotaciona e sobe)
-    glm::mat4 rot2 = Matrix_Rotate(orbit_angle * 0.66f, right);
-    glm::vec4 vec_p2 = rot2 * (p.p0 - moon_position);
-    p.p2 = moon_position + (vec_p2 * height_multiplier);
-    // P3: Alvo final (No chão/Orbita)
-    glm::mat4 rot3 = Matrix_Rotate(orbit_angle, right);
-    glm::vec4 vec_p3 = rot3 * (p.p0 - moon_position);
-    p.p3 = moon_position + vec_p3;
-    g_Projectiles.push_back(p);
-}
 
 // Fórmula da Curva de Bézier Cúbica 
 glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t) {
@@ -2154,17 +2030,6 @@ glm::vec4 evaluateBezierTangent(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::v
 
     glm::vec4 tangent = 3.0f * uu * (p1 - p0) + 6.0f * u * t * (p2 - p1) + 3.0f * tt * (p3 - p2);
     return NormalizeVector(tangent);
-}
-
-// Função para atualizar o tempo 't' dos tiros
-void updateProjectiles(float tprev, float tnow) {
-    float delta_t = tnow - tprev;
-    for (auto &p : g_Projectiles) {
-        if (p.active) {
-            p.t += p.speed * delta_t; // Avança o tempo
-            if (p.t >= 1.0f) p.active = false; // Remove se acabou
-        }
-    }
 }
 
 void processCollisions() {
@@ -2222,37 +2087,6 @@ void processCollisions() {
 
 
     // =======================================================
-    // Colisão Projétil vs. Inimigo (PONTO-ESFERA) 
-    // =======================================================
-    
-    // Iteramos sobre os projéteis
-    for (auto &proj : g_Projectiles) {
-        if (!proj.active) continue;
-        
-        // A posição atual do projétil é tratada como um PONTO na curva de Bézier
-        glm::vec4 current_proj_pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
-
-        // Iteramos sobre os inimigos
-        for (size_t i = 0; i < g_Enemies.size(); ++i) {
-            Enemy &enemy = g_Enemies[i];
-            
-            // Cria a Bounding Sphere do Inimigo
-            BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
-
-            if (checkPointSphereCollision(current_proj_pos, enemySphere)) {
-                
-                printf("Hit! \n", enemy.id);
-                proj.active = false; // Projétil é destruído
-                
-                std::swap(g_Enemies[i], g_Enemies.back());
-                g_Enemies.pop_back(); 
-                --i; // Decrementa o índice para checar o elemento que foi movido para esta posição
-                break; // Projétil só acerta um inimigo por frame
-            }
-        }
-    }
-
-    // =======================================================
     // Propósito 2: Colisão Nave vs. Inimigo (ESFERA-ESFERA)
     // =======================================================
     
@@ -2292,7 +2126,8 @@ void processCollisions() {
     }
     
     // =======================================================
-    // Propósito 3: Checkpoint em Órbita (RAIO-ESFERA)
+    // Propósito 3: Coletar Checkpoints (RAIO-ESFERA)
+    // * Itera sobre o vetor g_Checkpoints usando o teste de trajetória
     // =======================================================
     
     // A nave precisa ter se movido para que o raio de trajetória seja válido
@@ -2302,106 +2137,38 @@ void processCollisions() {
         Ray trajectoryRay;
         trajectoryRay.origin = g_AircraftPosition_Prev; // Posição anterior
         
-        // Vetor de movimento (posição atual - posição anterior)
         glm::vec4 movement_vector = g_AircraftPosition - g_AircraftPosition_Prev;
         movement_vector.w = 0.0f; 
         
-        // Normaliza para obter a direção do raio
         trajectoryRay.direction = NormalizeVector(movement_vector);
-        
-        BoundingSphere checkpointSphere = getCheckpointBoundingSphere(g_CheckpointPosition);
-        
-        float t_hit; // Distância do ponto de colisão
         float movement_distance = norm(movement_vector); 
 
-        if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
+        for (int i = g_Checkpoints.size() - 1; i >= 0; --i) {
+            glm::vec4 checkpoint_pos = g_Checkpoints[i];
             
-            // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento
-            if (t_hit >= 0.0f && t_hit <= movement_distance && g_Enemies.empty()) { 
-                if (!g_CheckpointReached) {
-                    g_CheckpointReached = true;
-                    printf("CHECKPOINT REACHED!\n", t_hit);
+            BoundingSphere checkpointSphere = getCheckpointBoundingSphere(checkpoint_pos); 
+            
+            float t_hit; // Distância do ponto de colisão
+
+            if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
+                
+                // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento de movimento
+                if (t_hit >= 0.0f && t_hit <= movement_distance) { 
+                    
+                    printf("CHECKPOINT %d COLETADO (Raio-Esfera)! Restantes: %lu\n", i, g_Checkpoints.size() - 1);
+                    
+                    // Remove o checkpoint coletado (swap and pop_back)
+                    std::swap(g_Checkpoints[i], g_Checkpoints.back());
+                    g_Checkpoints.pop_back(); 
+                    
+                    // Recuperar vida ao pegar um checkpoint
+                    if (g_AircraftLife < MAX_LIFE) {
+                         g_AircraftLife++; 
+                    }
                 }
             }
         }
     }
-
-    // =======================================================
-    // 4: Colisão Projétil (Inimigo) vs. Nave (PONTO-ESFERA)
-    // =======================================================
-
-    // Esfera da Nave para checagem
-    BoundingSphere aircraftSphereForProjectile = getAircraftBoundingSphere(g_AircraftPosition);
-
-    for (auto &proj : g_Projectiles) {
-        if (!proj.active) continue;
-
-        // Assumimos que projéteis com velocidade = 2.0f são inimigos (ver EnemyShoot)
-        if (proj.speed != 2.0f) continue; 
-        
-        glm::vec4 current_proj_pos = evaluateBezier(proj.p0, proj.p1, proj.p2, proj.p3, proj.t);
-
-        if (checkPointSphereCollision(current_proj_pos, aircraftSphereForProjectile)) {
-            
-            printf("OUCH! Nave atingida por projétil inimigo. \n");
-            proj.active = false; // Projétil inimigo é destruído ao acertar
-            
-            // Aplica DANO à Nave
-            if (!g_IsGameOver) {
-                g_AircraftLife -= 1;
-                printf("Vida restante: %d\n", g_AircraftLife);
-            
-                // Verifica Game Over
-                if (isGameOver()) {
-                    printf("GAME OVER! A nave foi destruída.\n");
-                }
-            }
-        }
-    }
-}
-
-// Função para o inimigo atirar em direção à aeronave.
-void EnemyShoot(Enemy& enemy) {
-    Projectile p;
-    p.active = true;
-    p.t = 0.0f;
-    p.speed = 2.0f; 
-
-    glm::vec4 enemyPos = enemy.position;
-    glm::vec4 targetPos = g_AircraftPosition; // O alvo é a nave do jogador
-    
-    // 3. Vetor de Mirada (Direção do Alvo)
-    glm::vec4 directionToTarget = NormalizeVector(targetPos - enemyPos);
-
-    // 1. Definição do P0 (Origem)
-    float offset_distance = AIRCRAFT_SPHERE_RADIUS + 0.1f; // Raio da esfera (0.5) + margem
-    p.p0 = enemyPos + directionToTarget * offset_distance; 
-    p.p0.w = 1.0f; 
-
-    // 2. Definição do P3 (Alvo)
-    p.p3 = targetPos; 
-    p.p3.w = 1.0f; 
-
-    float curveHeight = 5.0f; 
-    float distance = norm(enemyPos - targetPos); // Comprimento do vetor diferença
-    
-    // P1: Posição intermediária 1/3 do caminho + um pico de altura
-    p.p1 = enemyPos + (directionToTarget * (distance * 0.33f)) + (NormalizeVector(enemy.forward) * (curveHeight * 0.5f));
-    p.p1.w = 1.0f;
-
-    // P2: Posição intermediária 2/3 do caminho + um pico de altura
-    p.p2 = enemyPos + (directionToTarget * (distance * 0.66f)) + (NormalizeVector(enemy.forward) * (curveHeight * 0.5f));
-    p.p2.w = 1.0f;
-    
-    // Otimização: Garantir que P1 e P2 fiquem na órbita aproximada da lua
-    p.p1 = NormalizeVector(p.p1 - moon_position) * MOON_RADIUS * 1.05f;
-    p.p1.w = 1.0f;
-
-
-    p.p2 = NormalizeVector(p.p2 - moon_position) * MOON_RADIUS * 1.05f;
-    p.p2.w = 1.0f;
-
-    g_Projectiles.push_back(p);
 }
 
 glm::vec4 NormalizeVector(glm::vec4 v) {
@@ -2466,10 +2233,15 @@ void moveFreeCamera(float delta_t)
 }
 
 bool isGameOver() {
-    if (g_AircraftLife <= 0 || g_CheckpointReached) {
+    if (g_AircraftLife <= 0) {
         g_IsGameOver = true;
-
-        return true;
+        return true; 
+    }
+    
+    if (g_Checkpoints.empty())
+    {
+        g_IsGameOver = true;
+        return true; 
     }
 
     return false;
@@ -2477,14 +2249,13 @@ bool isGameOver() {
 
 void resetGame() {
     g_AircraftLife = 3;
-    g_CheckpointReached = false;
     g_IsGameOver = false;
     g_Enemies.clear();
-    g_Projectiles.clear();
     g_AircraftPosition = glm::vec4(0.0f, 0.0f, MOON_RADIUS + 2.0f, 1.0f);
     g_AircraftPosition_Prev = g_AircraftPosition;
     g_AircraftForward = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
     InitEnemies();
+    initCheckpoints(); 
 }
 
 void showText(GLFWwindow* window){
@@ -2498,7 +2269,7 @@ void showText(GLFWwindow* window){
     if (g_AircraftLife <= 0) {
         TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -0.4f, 0.0f, 2.0f);
         TextRendering_PrintString(window, "Pressione R para reiniciar", -0.3f, -0.1f, 1.5f);
-    } else if (g_CheckpointReached) {
+    } else if (g_Checkpoints.empty()) {
         TextRendering_PrintString(window, "PARABÉNS! VOCÊ VENCEU! (Pressione ESC para sair)", -0.5f, 0.0f, 2.0f);
         TextRendering_PrintString(window, "Pressione R para reiniciar", -0.3f, -0.1f, 1.5f);
     } else if (!g_IsGameOver) {
@@ -2513,9 +2284,6 @@ void showText(GLFWwindow* window){
         
         TextRendering_PrintString(window, "C para alternar câmera livre", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
-        
-        TextRendering_PrintString(window, "Espaço para atirar", -1.0f + margin_x, current_y, 1.0f);
-        current_y += pad;
 
         TextRendering_PrintString(window, "Use W,A,S,D para mover a aeronave", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
@@ -2525,5 +2293,23 @@ void showText(GLFWwindow* window){
         
         TextRendering_PrintString(window, "Pressione I para iniciar/pausar o jogo", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
+
+        snprintf(buffer, 80, "Checkpoints Faltantes: %lu", g_Checkpoints.size());
+        TextRendering_PrintString(window, buffer, -1.0f + margin_x, 1.0f - margin_y_top, 1.0f);
     }
+}
+
+void initCheckpoints() {
+    g_Checkpoints.clear();
+    
+    float orbit_distance = 16.0f; 
+    glm::vec4 center = moon_position; 
+    
+    g_Checkpoints.push_back(center + glm::vec4(orbit_distance, 0.0f, 0.0f, 1.0f));  
+    g_Checkpoints.push_back(center + glm::vec4(-orbit_distance, 0.0f, 0.0f, 1.0f)); 
+    g_Checkpoints.push_back(center + glm::vec4(0.0f, orbit_distance, 0.0f, 1.0f));  
+    g_Checkpoints.push_back(center + glm::vec4(0.0f, -orbit_distance, 0.0f, 1.0f)); 
+    g_Checkpoints.push_back(center + glm::vec4(0.0f, 0.0f, -orbit_distance, 1.0f)); 
+    
+    printf("5 Checkpoints inicializados. \n");
 }
