@@ -53,12 +53,10 @@
 #define SKYBOX 0
 #define AIRCRAFT 1
 #define PLANE 2
-#define ENEMY1 3
-#define ENEMY2 4
-#define ENEMY3 5
-#define CHECKPOINT_SPHERE 7
-#define HEALTH_BAR_BACKGROUND 8
-#define HEALTH_BAR_FOREGROUND 9 
+#define ENEMY 3
+#define CHECKPOINT_SPHERE 4
+#define HEALTH_BAR_BACKGROUND 5
+#define HEALTH_BAR_FOREGROUND 6 
 
 #define MAX_LIFE 3 
 #define M_PI_2 1.57079632679489661923
@@ -123,7 +121,6 @@ struct ObjModel
 };
 
 struct Enemy {
-    int id;                 // ID para o shader (ENEMY1, ENEMY2, etc)
     glm::vec4 position;     // Posição no mundo
     glm::vec4 forward;      // Para onde ele está olhando/indo
     float speed;            // Velocidade de movimento
@@ -603,7 +600,7 @@ int main(int argc, char* argv[])
                     * Matrix_Rotate_Y(M_PI_2 * 2); 
 
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-            glUniform1i(g_object_id_uniform, enemy.id); // Usa o ID guardado na struct
+            glUniform1i(g_object_id_uniform, ENEMY); // Usa o ID guardado na struct
 
             // Desenha o modelo 
             for (size_t i = 0; i < aircraft_model.shapes.size(); i++) {
@@ -1926,12 +1923,9 @@ float randomFloat(float min, float max) {
     return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
 }
 
-void InitEnemies() {
-    int ids[] = { ENEMY1, ENEMY2, ENEMY3 };
-    
+void InitEnemies() {    
     for(int i = 0; i < 3; i++) {
         Enemy e;
-        e.id = ids[i];
         
         // Posição aleatória na esfera 
         glm::vec4 randomPos = glm::vec4(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), 0.0f);
@@ -2105,7 +2099,7 @@ void processCollisions() {
             BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
 
             if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {
-                printf("CRASH! Nave atingida pelo Inimigo %d\n", enemy.id);
+                printf("CRASH! Nave atingida pelo Inimigo\n");
                 
                 // Aplica dano (se o jogo ainda não acabou)
                 if (!g_IsGameOver) {

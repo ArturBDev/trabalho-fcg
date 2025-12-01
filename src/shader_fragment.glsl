@@ -22,12 +22,10 @@ uniform mat4 projection;
 #define SKYBOX 0
 #define AIRCRAFT 1
 #define PLANE 2
-#define ENEMY1 3
-#define ENEMY2 4
-#define ENEMY3 5
-#define CHECKPOINT_SPHERE 7
-#define HEALTH_BAR_BACKGROUND 8
-#define HEALTH_BAR_FOREGROUND 9
+#define ENEMY 3
+#define CHECKPOINT_SPHERE 4
+#define HEALTH_BAR_BACKGROUND 5
+#define HEALTH_BAR_FOREGROUND 6
 
 uniform int object_id;
 
@@ -116,7 +114,7 @@ void main()
 
         Kd0 = texture(TextureImage2, vec2(U,V)).rgb;
     }
-    else if ( object_id == ENEMY1 || object_id == ENEMY2 || object_id == ENEMY3 )
+    else if ( object_id == ENEMY )
     {
         Ks = vec3(0.3,0.3,0.3);
         Ka = vec3(0.1,0.1,0.1); // Era 0.5, reduzido para escurecer as sombras
