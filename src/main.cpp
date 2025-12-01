@@ -290,6 +290,7 @@ float isWPressed = false;
 float isAPressed = false;
 float isDPressed = false;
 float isSPressed = false;
+float isIPressed = false;
 
 // Variaveis de posição da lua
 glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -520,7 +521,7 @@ int main(int argc, char* argv[])
             // Gera a matriz View
             camera_view_vector = camera_lookat_l - camera_position_c;
 
-            if (!isGameOver()) 
+            if (!isGameOver() && isIPressed) 
             {
                 moveAircraft(tprev, tnow, g_AircraftPosition);
                 moveEnemies(tprev, tnow);
@@ -1593,9 +1594,19 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             ;
     }
 
+    if(key == GLFW_KEY_I)
+    {
+        if (action == GLFW_PRESS)
+            // Usuário apertou a tecla I, então atualizamos o estado para pressionada
+            isIPressed = !isIPressed;
+    }
+
+
     if (key == GLFW_KEY_SPACE) {
         if (action == GLFW_PRESS && !isSpacePressed) {
-            Shoot();
+            if(isIPressed){
+                Shoot();
+            }
             isSpacePressed = true;
         }
         if (action == GLFW_RELEASE) {
@@ -2507,6 +2518,12 @@ void showText(GLFWwindow* window){
         current_y += pad;
 
         TextRendering_PrintString(window, "Use W,A,S,D para mover a aeronave", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
+
+        TextRendering_PrintString(window, "Use o mouse para olhar ao redor (câmera livre)", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
+        
+        TextRendering_PrintString(window, "Pressione I para iniciar/pausar o jogo", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
     }
 }
