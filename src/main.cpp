@@ -516,7 +516,7 @@ int main(int argc, char* argv[])
             // Gera a matriz View
             camera_view_vector = camera_lookat_l - camera_position_c;
 
-            if (!g_IsGameOver) 
+            if (!isGameOver()) 
             {
                 moveAircraft(tprev, tnow, g_AircraftPosition);
                 moveEnemies(tprev, tnow);
