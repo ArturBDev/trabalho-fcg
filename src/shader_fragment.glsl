@@ -26,6 +26,7 @@ uniform mat4 projection;
 #define CHECKPOINT_SPHERE 4
 #define HEALTH_BAR_BACKGROUND 5
 #define HEALTH_BAR_FOREGROUND 6
+#define ASTEROID 7
 
 uniform int object_id;
 
@@ -37,6 +38,7 @@ uniform vec4 bbox_max;
 uniform sampler2D TextureImage0;
 uniform sampler2D TextureImage1;
 uniform sampler2D TextureImage2;
+uniform sampler2D TextureImage3;
 
 uniform bool gouraud;
 
@@ -87,7 +89,7 @@ void main()
 
     if ( object_id == AIRCRAFT){       
         Ks = vec3(0.3,0.3,0.3);
-        Ka = vec3(0.1,0.1,0.1); // Era 0.5, reduzido para escurecer as sombras
+        Ka = vec3(0.1,0.1,0.1); 
         q = 20.0;
 
         U = texcoords.x;
@@ -106,7 +108,7 @@ void main()
     else if ( object_id == PLANE )
     {
         Ks = vec3(0.3,0.3,0.3);
-        Ka = vec3(0.1,0.1,0.1); // Era 0.5, reduzido para escurecer as sombras
+        Ka = vec3(0.1,0.1,0.1); 
         q = 20.0;
 
         U = texcoords.x;
@@ -117,7 +119,7 @@ void main()
     else if ( object_id == ENEMY )
     {
         Ks = vec3(0.3,0.3,0.3);
-        Ka = vec3(0.1,0.1,0.1); // Era 0.5, reduzido para escurecer as sombras
+        Ka = vec3(0.1,0.1,0.1); 
         q = 20.0;
 
         U = texcoords.x;
@@ -141,6 +143,16 @@ void main()
     {
         color = vec4(0.1, 0.8, 0.1, 1.0);
         return;
+    } else if ( object_id == ASTEROID )
+    {
+        Ks = vec3(0.3,0.3,0.3);
+        Ka = vec3(0.1,0.1,0.1); 
+        q = 20.0;
+
+        U = texcoords.x;
+        V = texcoords.y; 
+
+        Kd0 = texture(TextureImage3, vec2(U,V)).rgb;
     }
 
     // Espectro da fonte de iluminação 

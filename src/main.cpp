@@ -56,7 +56,8 @@
 #define ENEMY 3
 #define CHECKPOINT_SPHERE 4
 #define HEALTH_BAR_BACKGROUND 5
-#define HEALTH_BAR_FOREGROUND 6 
+#define HEALTH_BAR_FOREGROUND 6
+#define ASTEROID 7
 
 #define MAX_LIFE 3 
 #define M_PI_2 1.57079632679489661923
@@ -371,6 +372,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/textures/skybox.jpeg"); // TextureImage0
     LoadTextureImage("../../data/textures/aircraft.jpg"); // TextureImage1
     LoadTextureImage("../../data/textures/moon.jpg"); // TextureImage2
+    LoadTextureImage("../../data/textures/asteroid.jpg"); // TextureImage3
 
     ObjModel aircraft_model("../../data/aircraft.obj");
     ComputeNormals(&aircraft_model);
@@ -379,6 +381,10 @@ int main(int argc, char* argv[])
     ObjModel skybox_model("../../data/sphere.obj");
     ComputeNormals(&skybox_model);
     BuildTrianglesAndAddToVirtualScene(&skybox_model);
+
+    ObjModel asteroid_model("../../data/asteroid.obj");
+    ComputeNormals(&asteroid_model);
+    BuildTrianglesAndAddToVirtualScene(&asteroid_model);
 
     if ( argc > 1 )
     {
