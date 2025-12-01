@@ -57,7 +57,10 @@
 #define ENEMY2 4
 #define ENEMY3 5
 #define CHECKPOINT_SPHERE 7
+#define HEALTH_BAR_BACKGROUND 8
+#define HEALTH_BAR_FOREGROUND 9 
 
+#define MAX_LIFE 3 
 #define M_PI_2 1.57079632679489661923
 #define M_PI 3.14159265358979323846
 
@@ -684,6 +687,57 @@ int main(int argc, char* argv[])
 
         gouraud = false;
         glUniform1i(g_gouraud_uniform, gouraud);
+
+        if (g_AircraftLife > 0 && !g_CheckpointReached)
+        {
+            // Desativamos testes 3D (Z-buffer e Culling) para desenhar o HUD em 2D
+            glDisable(GL_DEPTH_TEST);
+            glDisable(GL_CULL_FACE);
+
+            // Matrizes Identidade (espaço NDC, fixo na tela)
+            glm::mat4 life_view = Matrix_Identity(); 
+            glm::mat4 life_projection = Matrix_Identity(); 
+            glm::mat4 life_model = Matrix_Identity();
+
+            glUniformMatrix4fv(g_view_uniform, 1, GL_FALSE, glm::value_ptr(life_view));
+            glUniformMatrix4fv(g_projection_uniform, 1, GL_FALSE, glm::value_ptr(life_projection));
+            // Configurações da Barra (Coordenadas de Dispositivo Normalizadas: -1 a 1)
+            float bar_width_max = 0.001f;     // Largura total em NDC
+            float bar_height = 0.0005f;       // Altura em NDC
+            float margin_x = 0.1f;         // Margem da borda direita
+            float margin_y = 0.1f;         // Margem da borda superior
+
+            float bar_x_center = 1.0f - margin_x - (bar_width_max / 2.0f);
+            
+            float bar_y_center = 1.0f - margin_y - (bar_height / 2.0f);
+
+            life_model = Matrix_Translate(bar_x_center, bar_y_center, 0.0f) 
+                      * Matrix_Scale(bar_width_max, bar_height, 0.0f); 
+            
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(life_model));
+            glUniform1i(g_object_id_uniform, HEALTH_BAR_BACKGROUND);
+            DrawVirtualObject("the_sphere"); 
+
+            float current_life_ratio = (float)g_AircraftLife / (float)MAX_LIFE;
+            float current_width = bar_width_max * current_life_ratio; 
+            
+            float x_offset_correction = (current_width - bar_width_max) / 2.0f;
+            
+            life_model = Matrix_Translate(bar_x_center + x_offset_correction, bar_y_center, 0.0f)
+                      * Matrix_Scale(current_width, bar_height, 0.0f);
+            
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(life_model));
+            glUniform1i(g_object_id_uniform, HEALTH_BAR_FOREGROUND);
+            DrawVirtualObject("the_sphere"); 
+
+            // Voltamos às configurações 3D
+            glEnable(GL_CULL_FACE);
+            glEnable(GL_DEPTH_TEST);
+
+            // Restauramos View e Projection para a câmera 3D
+            glUniformMatrix4fv(g_view_uniform, 1 , GL_FALSE , glm::value_ptr(view));
+            glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
+        }
 
         g_AircraftPosition_Prev = g_AircraftPosition; 
 

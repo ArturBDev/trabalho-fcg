@@ -26,6 +26,8 @@ uniform mat4 projection;
 #define ENEMY2 4
 #define ENEMY3 5
 #define CHECKPOINT_SPHERE 7
+#define HEALTH_BAR_BACKGROUND 8
+#define HEALTH_BAR_FOREGROUND 9
 
 uniform int object_id;
 
@@ -133,6 +135,14 @@ void main()
         Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
 
         color.rgb = Kd0;
+    } else if (object_id == HEALTH_BAR_BACKGROUND)
+    {
+        color = vec4(0.3, 0.3, 0.3, 1.0);
+        return;
+    } else if (object_id == HEALTH_BAR_FOREGROUND)
+    {
+        color = vec4(0.1, 0.8, 0.1, 1.0);
+        return;
     }
 
     // Espectro da fonte de iluminação 
