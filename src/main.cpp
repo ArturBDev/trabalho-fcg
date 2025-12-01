@@ -688,29 +688,36 @@ int main(int argc, char* argv[])
 
         tprev = tnow;
 
-        // Imprimimos na tela os ângulos de Euler que controlam a rotação do
-        // terceiro cubo.
-        TextRendering_ShowEulerAngles(window);
-
-        // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
-        TextRendering_ShowProjection(window);
-
-        // Imprimimos na tela informação sobre o número de quadros renderizados
-        // por segundo (frames per second).
-        TextRendering_ShowFramesPerSecond(window);
 
         float pad = TextRendering_LineHeight(window);
         char buffer[80];
         
+        float margin_x = 0.05f;
+        float margin_y_top = 0.05f;
+        float margin_y_bottom = 0.95f; 
+        
         if (g_IsGameOver) {
+            // Centralizado na tela
             TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -0.4f, 0.0f, 2.0f);
+            TextRendering_PrintString(window, "Pressione R para reiniciar", -0.3f, -0.1f, 1.5f);
         } else {
             snprintf(buffer, 80, "Vida: %d", g_AircraftLife);
-            TextRendering_PrintString(window, buffer, -1.0f+pad/10, 1.0f - pad/10 - 0.05f, 1.0f); 
-        }
+            float est_width = 15.0f * TextRendering_CharWidth(window);
+            
+            TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
+            float current_y = -1.0f + margin_y_top; // Começa na margem inferior, subindo.
 
-        if (g_CheckpointReached) {
-            TextRendering_PrintString(window, "CHECKPOINT ALCANCADO!", 0.0f, 0.5f, 1.5f);
+            TextRendering_PrintString(window, "Pressione ESC para sair", -1.0f + margin_x, current_y, 1.0f);
+            current_y += pad; // Move para cima para a próxima linha
+            
+            TextRendering_PrintString(window, "C para alternar câmera livre", -1.0f + margin_x, current_y, 1.0f);
+            current_y += pad;
+            
+            TextRendering_PrintString(window, "Espaço para atirar", -1.0f + margin_x, current_y, 1.0f);
+            current_y += pad;
+
+            TextRendering_PrintString(window, "Use W,A,S,D para mover a aeronave", -1.0f + margin_x, current_y, 1.0f);
+            current_y += pad;
         }
 
         // O framebuffer onde OpenGL executa as operações de renderização não
