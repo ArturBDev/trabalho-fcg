@@ -60,8 +60,6 @@ float distanceSq(const glm::vec4& p1, const glm::vec4& p2);
 extern const float MOON_RADIUS;
 extern const float AIRCRAFT_SPHERE_RADIUS;
 extern const float CHECKPOINT_RADIUS;
-
-// Constantes do Cilindro do Asteroide
 extern const float ASTEROID_CYLINDER_RADIUS;
 extern const float ASTEROID_CYLINDER_HEIGHT;
 
