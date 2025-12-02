@@ -42,6 +42,8 @@ uniform sampler2D TextureImage3;
 
 uniform bool gouraud;
 
+in vec4 color_v;
+
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
 
@@ -179,7 +181,10 @@ void main()
 
     if(object_id == SKYBOX || object_id == CHECKPOINT_SPHERE){
         color.rgb = Kd0; 
-    } else {        
+    }  else if(gouraud){
+        color.rgb =  color_v.rgb;
+    } 
+    else {        
         // Define a Refletância Difusa como a cor da textura (Kd0)
         Kd = Kd0; 
 
