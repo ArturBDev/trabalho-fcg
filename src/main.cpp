@@ -185,6 +185,7 @@ bool isGameOver();
 void resetGame();
 void showText(GLFWwindow* window);
 void initCheckpoints();
+void initRandomAsteroids();
 
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
@@ -302,6 +303,9 @@ float g_Asteroid_t = 0.0f;
 const float asteroidSpeed = 0.50f; 
 const float asteroidScale = 0.0004f; 
 
+std::vector<glm::vec4> g_RandomAsteroids; 
+const int numRandomAsteroids = 8; 
+
 int main(int argc, char* argv[])
 {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -413,10 +417,9 @@ int main(int argc, char* argv[])
     float tprev = glfwGetTime(); // velocidade
     float tnow;
     
-    // Inicializa inimigos 
     InitEnemies();
-
-    initCheckpoints(); // << ADICIONADO
+    initCheckpoints(); 
+    initRandomAsteroids(); 
 
     bool gouraud = false;
 
@@ -712,6 +715,22 @@ int main(int argc, char* argv[])
             glUniformMatrix4fv(g_view_uniform, 1 , GL_FALSE , glm::value_ptr(view));
             glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
         }
+
+
+        gouraud = true;
+        glUniform1i(g_gouraud_uniform, gouraud);
+        glUniform1i(g_object_id_uniform, ASTEROID); 
+
+        for (const auto& randomPos : g_RandomAsteroids) {
+            model = Matrix_Translate(randomPos.x, randomPos.y, randomPos.z) 
+                  * Matrix_Scale(asteroidScale, asteroidScale, asteroidScale); 
+            
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            DrawVirtualObject("10464_Asteroid_v1");
+        }
+        
+        gouraud = false; 
+        glUniform1i(g_gouraud_uniform, gouraud);
 
         g_AircraftPosition_Prev = g_AircraftPosition; 
 
@@ -2184,6 +2203,47 @@ void processCollisions() {
             }
         }
     }
+    
+    
+    bool collisionOccurred = false;
+
+    // =======================================================
+    // Colisão Nave vs. TODOS Asteroides (CILINDRO-ESFERA)
+    // =======================================================
+    
+    // Itera de trás para frente para permitir a remoção segura
+    for (int i = g_RandomAsteroids.size() - 1; i >= 0; --i) 
+    {
+        glm::vec4 asteroidPos = g_RandomAsteroids[i];
+        BoundingCylinder asteroidCylinder = getAsteroidBoundingCylinder(asteroidPos);
+        
+        if (checkCylinderSphereCollision(asteroidCylinder, aircraftSphere)) { 
+            
+            // Aplica dano e repulsão (apenas na primeira colisão deste frame)
+            if (!g_IsGameOver && !collisionOccurred) {
+                printf("CRASH! Nave atingida por Asteroide Aleatório.\n");
+                g_AircraftLife -= 1; 
+                printf("Vida restante: %d\n", g_AircraftLife);
+                if (isGameOver()) {
+                    printf("GAME OVER! A nave foi destruída.\n");
+                }
+                collisionOccurred = true;
+                
+                // Lógica de REPULSÃO 
+                glm::vec4 repulsion_vector = g_AircraftPosition - asteroidCylinder.center;
+                float repulsion_distance = 1.0f; 
+                glm::vec4 repulsion_direction = NormalizeVector(repulsion_vector);
+                g_AircraftPosition += repulsion_direction * repulsion_distance;
+                
+                float orbitDistance = 16.0f;
+                glm::vec4 finalDir = NormalizeVector(g_AircraftPosition - moon_position);
+                g_AircraftPosition = moon_position + (finalDir * orbitDistance);
+                g_AircraftPosition.w = 1.0f;
+            }
+            std::swap(g_RandomAsteroids[i], g_RandomAsteroids.back());
+            g_RandomAsteroids.pop_back(); 
+        }
+    }
 }
 
 glm::vec4 NormalizeVector(glm::vec4 v) {
@@ -2271,6 +2331,7 @@ void resetGame() {
     g_AircraftForward = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
     InitEnemies();
     initCheckpoints();
+    initRandomAsteroids();
     
     g_Asteroid_t = 0.0f; 
     glm::vec4 g_Asteroid_P0 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);    
@@ -2333,4 +2394,28 @@ void initCheckpoints() {
     g_Checkpoints.push_back(center + glm::vec4(0.0f, 0.0f, -orbit_distance, 1.0f)); 
     
     printf("5 Checkpoints inicializados. \n");
+}
+
+
+// Função que inicializa asteroides em posições aleatórias na órbita
+void initRandomAsteroids() {
+    g_RandomAsteroids.clear();
+    float orbit_distance = 16.0f; 
+    glm::vec4 center = moon_position; 
+
+    for (int i = 0; i < numRandomAsteroids; ++i) {
+        glm::vec4 randomDir = glm::vec4(
+            randomFloat(-1.0f, 1.0f), 
+            randomFloat(-1.0f, 1.0f), 
+            randomFloat(-1.0f, 1.0f), 
+            0.0f
+        );
+        randomDir = NormalizeVector(randomDir);
+
+        glm::vec4 asteroidPos = center + randomDir * orbit_distance;
+        asteroidPos.w = 1.0f;
+
+        g_RandomAsteroids.push_back(asteroidPos);
+    }
+    printf("%d Asteroides aleatórios inicializados.\n", numRandomAsteroids);
 }

@@ -11,6 +11,8 @@
 const float MOON_RADIUS = 16.0f;
 const float AIRCRAFT_SPHERE_RADIUS = 0.5f; 
 const float CHECKPOINT_RADIUS = 2.5f; 
+const float ASTEROID_CYLINDER_RADIUS = 1.5f; 
+const float ASTEROID_CYLINDER_HEIGHT = 5.0f; 
 
 
 /**
@@ -25,7 +27,7 @@ float distanceSq(const glm::vec4& p1, const glm::vec4& p2) {
 }
 
 /**
- * 1. Teste de Intersecção ESFERA-ESFERA (Nave vs. Inimigo)
+ * Teste de Intersecção ESFERA-ESFERA (Nave vs. Inimigo)
  */
 bool checkSphereSphereCollision(const BoundingSphere& s1, const BoundingSphere& s2) {
     float distanceSquared = distanceSq(s1.center, s2.center); 
@@ -37,18 +39,7 @@ bool checkSphereSphereCollision(const BoundingSphere& s1, const BoundingSphere& 
 }
 
 /**
- * 2. Teste de Intersecção PONTO-ESFERA (Projétil vs. Inimigo)
- */
-bool checkPointSphereCollision(const glm::vec4& point, const BoundingSphere& sphere) {
-    float distanceSquared = distanceSq(point, sphere.center); 
-    
-    float radiusSquared = sphere.radius * sphere.radius;
-
-    return distanceSquared <= radiusSquared;
-}
-
-/**
- * 3. Teste de Intersecção RAIO-ESFERA (Nave (Raio de Trajetória) vs. Checkpoint)
+ * Teste de Intersecção RAIO-ESFERA (Nave (Raio de Trajetória) vs. Checkpoint)
  */
 bool checkRaySphereCollision(const Ray& ray, const BoundingSphere& sphere, float& t_out) {
     // Vetor do centro do raio (c) para o centro da esfera (s): L = c - s
@@ -93,6 +84,52 @@ bool checkRaySphereCollision(const Ray& ray, const BoundingSphere& sphere, float
     return true;
 }
 
+
+/**
+ * Teste de Intersecção CILINDRO-ESFERA (Asteroide vs. Nave)
+ */
+bool checkCylinderSphereCollision(const BoundingCylinder& cylinder, const BoundingSphere& sphere) {
+    // 1. Checagem Horizontal/Radial (em 2D - plano XZ)
+    
+    // Projeta o centro da esfera no plano XZ do centro do cilindro
+    glm::vec4 sphereCenterXZ = sphere.center;
+    sphereCenterXZ.y = cylinder.center.y;
+    
+    // Distância horizontal ao quadrado
+    float distanceXZSquared = distanceSq(cylinder.center, sphereCenterXZ);
+
+    float radialRadiusSum = cylinder.radius + sphere.radius;
+    if (distanceXZSquared > (radialRadiusSum * radialRadiusSum)) {
+        return false; // Não colide radialmente
+    }
+    
+    // 2. Checagem Vertical (Eixo Y)
+    
+    float halfHeight = cylinder.height / 2.0f;
+    
+    float cylinderMinY = cylinder.center.y - halfHeight;
+    float cylinderMaxY = cylinder.center.y + halfHeight;
+    
+    float sphereMinY = sphere.center.y - sphere.radius;
+    float sphereMaxY = sphere.center.y + sphere.radius;
+
+    // Checa sobreposição dos intervalos [MinY, MaxY]
+    if (sphereMaxY < cylinderMinY || sphereMinY > cylinderMaxY) {
+        return false; // Não colide verticalmente
+    }
+
+    // Se houver sobreposição em ambos os eixos, há colisão.
+    return true;
+}
+
+
+BoundingCylinder getAsteroidBoundingCylinder(const glm::vec4& asteroidPosition) {
+    return {
+        asteroidPosition,
+        ASTEROID_CYLINDER_RADIUS,
+        ASTEROID_CYLINDER_HEIGHT
+    };
+}
 
 BoundingSphere getEnemyBoundingSphere(const glm::vec4& enemyPosition) {
     return {
