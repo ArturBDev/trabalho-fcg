@@ -495,7 +495,6 @@ int main(int argc, char* argv[])
 
             right_vec = NormalizeVector(crossproduct(up_vec, front_vec)); 
             
-
             // O ponto para onde a câmera olha (LookAt) é a própria nave
             camera_lookat_l = g_AircraftPosition;
 
