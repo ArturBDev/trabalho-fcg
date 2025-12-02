@@ -41,6 +41,7 @@ uniform sampler2D TextureImage2;
 uniform sampler2D TextureImage3;
 
 uniform bool gouraud;
+uniform bool is_damaged;
 
 in vec4 color_v;
 
@@ -96,10 +97,15 @@ void main()
 
         U = texcoords.x;
         V = texcoords.y; 
+        
+        if (is_damaged) {
+            Kd0 = vec3(1.0, 0.0, 0.0); 
+        } else {
+            // Caso contrário, usamos a textura normal (TextureImage1)
+            Kd0 = texture(TextureImage1, vec2(U,V)).rgb;
+        }
 
-        Kd0 = texture(TextureImage1, vec2(U,V)).rgb;  
-
-    }    
+    }  
     else if ( object_id == SKYBOX )
     {
         U = texcoords.x;

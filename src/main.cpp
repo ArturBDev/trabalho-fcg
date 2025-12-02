@@ -268,6 +268,9 @@ GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
 GLint g_gouraud_uniform;
+GLint g_is_damaged_uniform;
+
+
 
 
 // Número de texturas carregadas pela função LoadTextureImage()
@@ -317,13 +320,17 @@ const int numRandomAsteroids = 8;
 std::vector<Missile> g_Missiles;
 const float missileSpeed = 20.0f;
 const float missileLifespan = 2.0f; // 2 segundos de vida
-const float MISSILE_RADIUS = 0.05f; 
+const float missileRadius = 0.15f; 
 
 // Variáveis de controle de tiro da nave
 float g_PlayerShotTimer = 0.0f;
 const float shootColdownTimer = 1.0f; // Intervalo de 1s entre tiros
 
 const float enemyShotSpeed = 7.0f; // Inimigo atira a cada 5 segundos
+
+// Feedback de dano
+float g_DamageTimer = 0.0f;
+const float damageDuration = 0.2f; // Nave fica vermelha por 0.2 segundos
 
 int main(int argc, char* argv[])
 {
@@ -581,13 +588,18 @@ int main(int argc, char* argv[])
             projection = Matrix_Orthographic(l, r, b, t, nearplane, farplane);
         }
 
-
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
         // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
         // efetivamente aplicadas em todos os pontos.
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
+        if (g_DamageTimer > 0.0f && !isGameOver()) {
+            g_DamageTimer -= delta_t;
+        }
+
+        bool is_damaged = (g_DamageTimer > 0.0f);
+        glUniform1i(g_is_damaged_uniform, is_damaged);
 
         // Desenha Infinito ao redor da cena
         model = Matrix_Translate(camera_position_c.x,camera_position_c.y,camera_position_c.z) * Matrix_Scale(1.0f/60.0f, 1.0f/60.0f, 1.0f/60.0f);
@@ -938,6 +950,7 @@ void LoadShadersFromFiles()
     g_object_id_uniform  = glGetUniformLocation(g_GpuProgramID, "object_id"); // Variável "object_id" em shader_fragment.glsl
     g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
     g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
+    g_is_damaged_uniform = glGetUniformLocation(g_GpuProgramID, "is_damaged"); 
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(g_GpuProgramID);
@@ -2025,7 +2038,7 @@ float randomFloat(float min, float max) {
 }
 
 void InitEnemies() {    
-    for(int i = 0; i < 3; i++) {
+    for(int i = 0; i < 0; i++) {
         Enemy e;
         
         // Posição aleatória na esfera 
@@ -2137,61 +2150,8 @@ glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3,
 }
 
 void processCollisions() {
-    // Variáveis auxiliares para a esfera de colisão
-    float fixedDistance = 16.0f; // Raio da órbita/Lua
-    // Distância mínima 
-    float separation_radius = AIRCRAFT_SPHERE_RADIUS * 2.0f; 
-    
-    for (size_t i = 0; i < g_Enemies.size(); ++i) {
-        for (size_t j = i + 1; j < g_Enemies.size(); ++j) {
-            Enemy &e1 = g_Enemies[i];
-            Enemy &e2 = g_Enemies[j];
-
-            glm::vec4 diff_vector = e1.position - e2.position;
-            diff_vector.w = 0.0f; // Garante que é um vetor de direção
-            
-            float current_distance = norm(diff_vector);
-            
-            // Se estiverem muito próximos (menor que o raio de separação)
-            if (current_distance < separation_radius) {
-                
-                float overlap = separation_radius - current_distance;
-                
-                // Evita divisão por zero
-                if (current_distance < std::numeric_limits<float>::epsilon()) {
-                    // Se for zero, aplica um pequeno empurrão aleatório
-                    glm::vec4 randomDir = glm::vec4(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), 0.0f);
-                    diff_vector = randomDir;
-                    current_distance = norm(randomDir);
-                }
-                
-                // Direção de separação (normalizada)
-                glm::vec4 separation_direction = diff_vector / current_distance; 
-                separation_direction.w = 0.0f;
-
-                // Aplica correção, movendo metade do excesso para cada um
-                glm::vec4 correction = separation_direction * (overlap * 0.5f);
-                e1.position += correction;
-                e2.position -= correction;
-
-                // Reprojetar E1
-                glm::vec4 dir1 = NormalizeVector(e1.position - moon_position);
-                dir1.w = 0.0f;
-                e1.position = moon_position + (dir1 * fixedDistance);
-                e1.position.w = 1.0f;
-
-                // Reprojetar E2
-                glm::vec4 dir2 = NormalizeVector(e2.position - moon_position);
-                dir2.w = 0.0f;
-                e2.position = moon_position + (dir2 * fixedDistance);
-                e2.position.w = 1.0f;
-            }
-        }
-    }
-
-
     // =======================================================
-    // Propósito 2: Colisão Nave vs. Inimigo (ESFERA-ESFERA)
+    // Colisão Nave vs. Inimigo (ESFERA-ESFERA)
     // =======================================================
     
     // Cria a Bounding Sphere da Nave
@@ -2220,6 +2180,8 @@ void processCollisions() {
                     if (isGameOver()) {
                         printf("GAME OVER! A nave foi destruída.\n");
                     }
+
+                    g_DamageTimer = damageDuration;
                 }
 
                 // Destrói o inimigo 
@@ -2230,7 +2192,7 @@ void processCollisions() {
     }
     
     // =======================================================
-    // Propósito 3: Coletar Checkpoints (RAIO-ESFERA)
+    // Coletar Checkpoints (RAIO-ESFERA)
     // * Itera sobre o vetor g_Checkpoints usando o teste de trajetória
     // =======================================================
     
@@ -2298,17 +2260,8 @@ void processCollisions() {
                     printf("GAME OVER! A nave foi destruída.\n");
                 }
                 collisionOccurred = true;
-                
-                // Lógica de REPULSÃO 
-                glm::vec4 repulsion_vector = g_AircraftPosition - asteroidCylinder.center;
-                float repulsion_distance = 1.0f; 
-                glm::vec4 repulsion_direction = NormalizeVector(repulsion_vector);
-                g_AircraftPosition += repulsion_direction * repulsion_distance;
-                
-                float orbitDistance = 16.0f;
-                glm::vec4 finalDir = NormalizeVector(g_AircraftPosition - moon_position);
-                g_AircraftPosition = moon_position + (finalDir * orbitDistance);
-                g_AircraftPosition.w = 1.0f;
+
+                g_DamageTimer = damageDuration;
             }
             std::swap(g_RandomAsteroids[i], g_RandomAsteroids.back());
             g_RandomAsteroids.pop_back(); 
@@ -2321,7 +2274,7 @@ void processCollisions() {
         
         if (!missile.isActive) continue;
 
-        BoundingSphere missileSphere = {missile.position, MISSILE_RADIUS};
+        BoundingSphere missileSphere = {missile.position, missileRadius};
         
         bool hit = false;
         
@@ -2357,6 +2310,9 @@ void processCollisions() {
                     if (isGameOver()) {
                         printf("GAME OVER! A nave foi destruída.\n");
                     }
+
+                    // ** CORREÇÃO: Ativar o temporizador de dano quando atingido por míssil **
+                    g_DamageTimer = damageDuration; 
                 }
                 hit = true;
             }
@@ -2430,12 +2386,13 @@ void resetGame() {
     InitEnemies();
     initCheckpoints();
     initRandomAsteroids();
-    
+    g_DamageTimer = 0.0f;    
     g_Asteroid_t = 0.0f; 
     glm::vec4 g_Asteroid_P0 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);    
     glm::vec4 g_Asteroid_P1 = glm::vec4(12.0f, 4.0f, 4.0f, 1.0f);    
     glm::vec4 g_Asteroid_P2 = glm::vec4(20.0f, 4.0f, -4.0f, 1.0f);   
-    glm::vec4 g_Asteroid_P3 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);    
+    glm::vec4 g_Asteroid_P3 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);  
+    g_Missiles.clear();
 }
 
 void showText(GLFWwindow* window){

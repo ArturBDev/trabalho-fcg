@@ -11,7 +11,7 @@
 const float MOON_RADIUS = 16.0f;
 const float AIRCRAFT_SPHERE_RADIUS = 0.3f; 
 const float CHECKPOINT_RADIUS = 1.5f; 
-const float ASTEROID_CYLINDER_RADIUS = 0.3f; 
+const float ASTEROID_CYLINDER_RADIUS = 0.5f; 
 const float ASTEROID_CYLINDER_HEIGHT = 1.0f; 
 
 
