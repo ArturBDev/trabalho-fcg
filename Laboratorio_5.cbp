@@ -371,7 +371,7 @@
 		<Unit filename="include/tiny_obj_loader.h" />
 		<Unit filename="include/utils.h" />
 		<Unit filename="include/utils.h" />
-		<Unit filename="src/collisions.c">
+		<Unit filename="src/collisions.h">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/main.cpp" />
