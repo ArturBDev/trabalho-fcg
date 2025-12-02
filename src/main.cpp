@@ -286,9 +286,6 @@ const float enemySpeed = 5.0f; // Velocidade do inimigo
 
 // Variaveis globais de controle da Câmera Livre
 bool g_UseFreeCamera = false; 
-// Variáveis de Posição/Estado da Câmera
-glm::vec4 last_cam_pos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Ponto Look-At (Look-At Mode)
-glm::vec4 aux_cam = glm::vec4(0.0f, 0.0f, 3.0f, 1.0f);      // Posição Câmera Livre (Free Camera Mode)
 
 int g_AircraftLife = 3; 
 bool g_IsGameOver = false;
@@ -489,10 +486,38 @@ int main(int argc, char* argv[])
 
             // Gera a matriz View
             camera_view_vector = camera_lookat_l - camera_position_c;
-            last_cam_pos = camera_position_c; // Atualiza a última posição válida da câmera
         } else {
+            up_vec = NormalizeVector(g_AircraftPosition - moon_position);
+            front_vec = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
+                
+            // Atualizamos a global para evitar drift 
+            g_AircraftForward = front_vec; 
 
+            right_vec = NormalizeVector(crossproduct(up_vec, front_vec)); 
             
+
+            // O ponto para onde a câmera olha (LookAt) é a própria nave
+            camera_lookat_l = g_AircraftPosition;
+
+            // Calculamos o deslocamento local baseado no mouse (Theta/Phi) e Distância
+            float r = 0.1f;
+            float offset_y_local = r * sin(g_CameraPhi);                  // Altura relativa à nave
+            float offset_x_local = r * cos(g_CameraPhi) * sin(g_CameraTheta); // Lado relativo
+            float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
+
+            // usando os vetores da nave (Right, Up, Front) como base.
+            glm::vec4 final_offset = (right_vec * offset_x_local) + 
+                                    (up_vec    * offset_y_local) + 
+                                    (front_vec * offset_z_local);
+
+            // A posição da câmera é: Posição da Nave - Deslocamento Calculado
+            camera_position_c = camera_lookat_l - final_offset;
+
+            // O vetor "Cima" da câmera agora deve ser a normal da Lua, não o Y global (0,1,0)
+            camera_up_vector = up_vec;
+
+            // Gera a matriz View
+            camera_view_vector = camera_lookat_l - camera_position_c;            
         }
 
         if (!isGameOver() && isIPressed) 
