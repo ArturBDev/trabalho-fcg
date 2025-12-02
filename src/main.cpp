@@ -282,7 +282,7 @@ glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 std::vector<glm::vec4> g_Checkpoints; // Posições dos 5 Checkpoints
 
 const float turnRate = 2.0f; // Velocidade máxima de giro (em radianos/segundo)
-const float enemySpeed = 5.0f; // Velocidade do inimigo
+const float enemySpeed = 7.0f; // Velocidade do inimigo
 
 // Variaveis globais de controle da Câmera Livre
 bool g_UseFirstPersonCamera = false; 
