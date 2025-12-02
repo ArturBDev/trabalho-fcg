@@ -178,7 +178,6 @@ float randomFloat(float min, float max);
 void InitEnemies();
 void moveEnemies(float tprev, float tnow);
 glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t);
-glm::vec4 evaluateBezierTangent(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t);
 void processCollisions();
 void moveFreeCamera(float delta_t);
 glm::vec4 NormalizeVector(glm::vec4 v);
@@ -294,6 +293,14 @@ float g_FreeCameraPitch = 0.0f;
 
 int g_AircraftLife = 3; 
 bool g_IsGameOver = false;
+
+glm::vec4 g_Asteroid_P0 = glm::vec4(21.0f, 0.0f, 0.0f, 1.0f);   
+glm::vec4 g_Asteroid_P1 = glm::vec4(17.0f, 4.0f, 4.0f, 1.0f);   
+glm::vec4 g_Asteroid_P2 = glm::vec4(25.0f, 4.0f, -4.0f, 1.0f); 
+glm::vec4 g_Asteroid_P3 = glm::vec4(21.0f, 0.0f, 0.0f, 1.0f);    
+float g_Asteroid_t = 0.0f;
+const float asteroidSpeed = 0.50f; 
+const float asteroidScale = 0.0004f; 
 
 int main(int argc, char* argv[])
 {
@@ -510,6 +517,14 @@ int main(int argc, char* argv[])
                 moveEnemies(tprev, tnow);
                 processCollisions();
             }
+
+            float delta_t = tnow - tprev;
+            g_Asteroid_t += asteroidSpeed * delta_t; 
+            
+            if (g_Asteroid_t >= 1.0f) {
+                // Reinicia o tempo para loopar a curva local
+                g_Asteroid_t = 0.0f;
+            }
         }
 
         view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -624,6 +639,16 @@ int main(int argc, char* argv[])
             glUniform1i(g_object_id_uniform, CHECKPOINT_SPHERE); 
             DrawVirtualObject("the_sphere"); 
         }
+
+        // 1. Calcula a posição na Curva de Bézier.
+        glm::vec4 pos = evaluateBezier(g_Asteroid_P0, g_Asteroid_P1, g_Asteroid_P2, g_Asteroid_P3, g_Asteroid_t);
+
+        model = Matrix_Translate(pos.x, pos.y, pos.z) 
+                * Matrix_Scale(asteroidScale, asteroidScale, asteroidScale); 
+        
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, ASTEROID); 
+        DrawVirtualObject("10464_Asteroid_v1"); 
 
         gouraud = true;
         glUniform1i(g_gouraud_uniform, gouraud);
@@ -2022,16 +2047,6 @@ glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3,
     return (uuu * p0) + (3 * uu * t * p1) + (3 * u * tt * p2) + (ttt * p3);
 }
 
-// Derivada da Curva 
-glm::vec4 evaluateBezierTangent(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t) {
-    float u = 1.0f - t;
-    float uu = u * u;
-    float tt = t * t;
-
-    glm::vec4 tangent = 3.0f * uu * (p1 - p0) + 6.0f * u * t * (p2 - p1) + 3.0f * tt * (p3 - p2);
-    return NormalizeVector(tangent);
-}
-
 void processCollisions() {
     // Variáveis auxiliares para a esfera de colisão
     float fixedDistance = 16.0f; // Raio da órbita/Lua
@@ -2251,11 +2266,16 @@ void resetGame() {
     g_AircraftLife = 3;
     g_IsGameOver = false;
     g_Enemies.clear();
-    g_AircraftPosition = glm::vec4(0.0f, 0.0f, MOON_RADIUS + 2.0f, 1.0f);
+    glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 0.0f, 16.0f, 1.0f);
     g_AircraftPosition_Prev = g_AircraftPosition;
     g_AircraftForward = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
     InitEnemies();
-    initCheckpoints(); 
+    
+    g_Asteroid_t = 0.0f; 
+    glm::vec4 g_Asteroid_P0 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);    
+    glm::vec4 g_Asteroid_P1 = glm::vec4(12.0f, 4.0f, 4.0f, 1.0f);    
+    glm::vec4 g_Asteroid_P2 = glm::vec4(20.0f, 4.0f, -4.0f, 1.0f);   
+    glm::vec4 g_Asteroid_P3 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);    
 }
 
 void showText(GLFWwindow* window){
