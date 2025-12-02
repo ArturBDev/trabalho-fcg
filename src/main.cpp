@@ -2266,10 +2266,11 @@ void resetGame() {
     g_AircraftLife = 3;
     g_IsGameOver = false;
     g_Enemies.clear();
-    glm::vec4 g_AircraftPosition = glm::vec4(0.0f, 0.0f, 16.0f, 1.0f);
+    g_AircraftPosition = glm::vec4(0.0f, 0.0f, 16.0f, 1.0f);
     g_AircraftPosition_Prev = g_AircraftPosition;
     g_AircraftForward = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
     InitEnemies();
+    initCheckpoints();
     
     g_Asteroid_t = 0.0f; 
     glm::vec4 g_Asteroid_P0 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);    
