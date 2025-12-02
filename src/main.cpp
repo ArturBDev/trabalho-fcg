@@ -598,7 +598,7 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
         // para decrementar o damage feedback, faz com que ele desapareça
-        if (g_DamageTimer > 0.0f && !isGameOver()) {
+        if (g_DamageTimer > 0.0f) {
             g_DamageTimer -= delta_t;
         }
 

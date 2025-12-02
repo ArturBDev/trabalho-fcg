@@ -381,6 +381,8 @@
 		<Unit filename="src/textrendering.cpp" />
 		<Unit filename="src/tiny_obj_loader.cpp" />
 		<Unit filename="src/collisions.cpp" />
+		<Unit filename="src/glad.c" />
+
 		<Extensions>
 			<code_completion />
 			<envvars />
