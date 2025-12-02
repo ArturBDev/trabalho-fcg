@@ -2168,17 +2168,13 @@ void processCollisions() {
             
             BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
 
-            if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {
-                printf("CRASH! Nave atingida pelo Inimigo\n");
-                
+            if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {                
                 // Aplica dano (se o jogo ainda não acabou)
                 if (!g_IsGameOver) {
                     g_AircraftLife -= 1;
-                    printf("Vida restante: %d\n", g_AircraftLife);
                 
                     // Verifica Game Over
                     if (isGameOver()) {
-                        printf("GAME OVER! A nave foi destruída.\n");
                     }
 
                     g_DamageTimer = damageDuration;
@@ -2218,10 +2214,7 @@ void processCollisions() {
             if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
                 
                 // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento de movimento
-                if (t_hit >= 0.0f && t_hit <= movement_distance) { 
-                    
-                    printf("CHECKPOINT %d COLETADO (Raio-Esfera)! Restantes: %lu\n", i, g_Checkpoints.size() - 1);
-                    
+                if (t_hit >= 0.0f && t_hit <= movement_distance) {                     
                     // Remove o checkpoint coletado 
                     std::swap(g_Checkpoints[i], g_Checkpoints.back());
                     g_Checkpoints.pop_back(); 
@@ -2250,12 +2243,7 @@ void processCollisions() {
         
         if (checkCylinderSphereCollision(asteroidCylinder, aircraftSphere)) { 
             if (!g_IsGameOver && !collisionOccurred) {
-                printf("CRASH! Nave atingida por Asteroide Aleatório.\n");
                 g_AircraftLife -= 1; 
-                printf("Vida restante: %d\n", g_AircraftLife);
-                if (isGameOver()) {
-                    printf("GAME OVER! A nave foi destruída.\n");
-                }
                 collisionOccurred = true;
 
                 g_DamageTimer = damageDuration;
@@ -2284,9 +2272,7 @@ void processCollisions() {
                 Enemy &enemy = g_Enemies[j];
                 BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
 
-                if (checkSphereSphereCollision(missileSphere, enemySphere)) {
-                    printf("Inimigo atingido por míssil da Nave!\n");
-                    
+                if (checkSphereSphereCollision(missileSphere, enemySphere)) {                    
                     // Destrói o inimigo
                     std::swap(g_Enemies[j], g_Enemies.back());
                     g_Enemies.pop_back();
@@ -2296,17 +2282,10 @@ void processCollisions() {
             }
         } else { // Míssil do Inimigo -> Colide com a Nave
             BoundingSphere aircraftSphere = getAircraftBoundingSphere(g_AircraftPosition);
-            if (checkSphereSphereCollision(missileSphere, aircraftSphere)) {
-                printf("Nave atingida por míssil inimigo!\n");
-                
+            if (checkSphereSphereCollision(missileSphere, aircraftSphere)) {                
                 // Aplica dano (se o jogo ainda não acabou)
                 if (!g_IsGameOver) {
                     g_AircraftLife -= 1;
-                    printf("Vida restante: %d\n", g_AircraftLife);
-                
-                    if (isGameOver()) {
-                        printf("GAME OVER! A nave foi destruída.\n");
-                    }
 
                     g_DamageTimer = damageDuration; 
                 }
@@ -2324,10 +2303,7 @@ void processCollisions() {
             glm::vec4 asteroidPos = g_RandomAsteroids[j];
             BoundingCylinder asteroidCylinder = getAsteroidBoundingCylinder(asteroidPos);
             
-            if (checkCylinderSphereCollision(asteroidCylinder, missileSphere)) { 
-                
-                printf("Míssil atingiu um Asteroide Aleatório e foi destruído.\n");
-                
+            if (checkCylinderSphereCollision(asteroidCylinder, missileSphere)) {                 
                 std::swap(g_RandomAsteroids[j], g_RandomAsteroids.back());
                 g_RandomAsteroids.pop_back(); 
                 
