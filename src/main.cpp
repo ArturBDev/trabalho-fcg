@@ -58,6 +58,7 @@
 #define HEALTH_BAR_BACKGROUND 5
 #define HEALTH_BAR_FOREGROUND 6
 #define ASTEROID 7
+#define MISSILE 8 
 
 #define MAX_LIFE 3 
 #define M_PI_2 1.57079632679489661923
@@ -128,6 +129,15 @@ struct Enemy {
     float changeDirTimer;   // Tempo até a próxima mudança de direção aleatória
 };
 
+struct Missile {
+    glm::vec4 position;     // Posição no mundo
+    glm::vec4 forward;      // Direção do voo (tangente à órbita)
+    float speed;            // Velocidade
+    float fixedDistance;    // Distância fixa da órbita (16.0f)
+    bool isActive;          // Se está ativo no jogo
+    int ownerId;            // Quem disparou (0: Nave, >0: Inimigo ID)
+    float lifeTime;         // Tempo de vida (para auto-destruição)
+};
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
@@ -185,6 +195,8 @@ void resetGame();
 void showText(GLFWwindow* window);
 void initCheckpoints();
 void initRandomAsteroids();
+void FireMissile(const glm::vec4& startPos, const glm::vec4& direction, int ownerId);
+void updateMissiles(float tprev, float tnow);
 
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
@@ -282,7 +294,7 @@ glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 std::vector<glm::vec4> g_Checkpoints; // Posições dos 5 Checkpoints
 
 const float turnRate = 2.0f; // Velocidade máxima de giro (em radianos/segundo)
-const float enemySpeed = 7.0f; // Velocidade do inimigo
+const float enemySpeed = 5.0f; // Velocidade do inimigo
 
 // Variaveis globais de controle da Câmera Livre
 bool g_UseFirstPersonCamera = false; 
@@ -300,6 +312,18 @@ const float asteroidScale = 0.0004f;
 
 std::vector<glm::vec4> g_RandomAsteroids; 
 const int numRandomAsteroids = 8; 
+
+// Variável Global para armazenar todos os mísseis
+std::vector<Missile> g_Missiles;
+const float missileSpeed = 20.0f;
+const float missileLifespan = 2.0f; // 2 segundos de vida
+const float MISSILE_RADIUS = 0.05f; 
+
+// Variáveis de controle de tiro da nave
+float g_PlayerShotTimer = 0.0f;
+const float shootColdownTimer = 1.0f; // Intervalo de 1s entre tiros
+
+const float enemyShotSpeed = 7.0f; // Inimigo atira a cada 5 segundos
 
 int main(int argc, char* argv[])
 {
@@ -513,6 +537,7 @@ int main(int argc, char* argv[])
         {
             moveAircraft(tprev, tnow, g_AircraftPosition);
             moveEnemies(tprev, tnow);
+            updateMissiles(tprev, tnow); 
             processCollisions();
         }
 
@@ -725,6 +750,35 @@ int main(int argc, char* argv[])
         
         gouraud = false; 
         glUniform1i(g_gouraud_uniform, gouraud);
+
+        for (const auto &missile : g_Missiles) {
+            if (!missile.isActive) continue;
+
+            glm::vec4 missile_pos = missile.position;
+            glm::vec4 up_m = NormalizeVector(missile_pos - moon_position);
+            glm::vec4 front_m = missile.forward;
+            glm::vec4 right_m = NormalizeVector(crossproduct(up_m, front_m));
+            
+            glm::mat4 rotation_align_missile = glm::mat4(1.0f);
+            rotation_align_missile[0] = right_m;
+            rotation_align_missile[1] = up_m;
+            rotation_align_missile[2] = front_m;
+
+            model = Matrix_Translate(missile_pos.x, missile_pos.y, missile_pos.z)
+                  * rotation_align_missile
+                  * Matrix_Scale(0.1f, 0.1f, 0.1f) 
+                  * Matrix_Rotate_Y(M_PI);   
+
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, AIRCRAFT); // Usa textura da nave
+
+            for (size_t i = 0; i < aircraft_model.shapes.size(); i++) {
+                if (aircraft_model.shapes[i].name == "R-40TL") {
+                    DrawVirtualObject(aircraft_model.shapes[i].name.c_str());
+                    break;
+                }
+            }
+        }
 
         g_AircraftPosition_Prev = g_AircraftPosition; 
 
@@ -1592,7 +1646,22 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         g_UseFirstPersonCamera = !g_UseFirstPersonCamera;
     }
 
-    // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+        float tnow = glfwGetTime();
+        if (tnow > g_PlayerShotTimer + shootColdownTimer && isIPressed && !g_IsGameOver) {
+            
+            g_PlayerShotTimer = tnow; // Resetar o temporizador
+            
+            glm::vec4 up_vec = NormalizeVector(g_AircraftPosition - moon_position);
+            glm::vec4 front_vec = g_AircraftForward; 
+            glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, front_vec)); 
+            
+            glm::vec4 missile_start_pos = g_AircraftPosition + front_vec * 0.5f + right_vec * -0.45f; 
+
+            FireMissile(missile_start_pos, front_vec, 0); // ownerId 0 = Nave
+        }
+    }
+
     if (key == GLFW_KEY_R && action == GLFW_PRESS)
     {
         LoadShadersFromFiles();
@@ -2033,6 +2102,25 @@ void moveEnemies(float tprev, float tnow) {
         finalDir = NormalizeVector(finalDir);
         enemy.position = moon_position + (finalDir * fixedDistance);
         enemy.position.w = 1.0f; 
+
+        // Timer para o disparo do inimigo
+        static float enemy_shot_timer = 0.0f;
+        enemy_shot_timer += delta_t; 
+
+        for (auto &enemy : g_Enemies) {
+            // Lógica de Disparo do Inimigo
+            if (enemy_shot_timer > enemyShotSpeed) {
+                
+                glm::vec4 enemy_forward = enemy.forward;
+                glm::vec4 missile_start_pos = enemy.position + enemy_forward * 0.5f; 
+                
+                FireMissile(missile_start_pos, enemy_forward, 1); // ownerId 1 
+            }
+        }
+        
+        if (enemy_shot_timer > enemyShotSpeed) {
+            enemy_shot_timer = 0.0f; // Resetar timer após o loop
+        }
     }
 }
 
@@ -2226,6 +2314,83 @@ void processCollisions() {
             g_RandomAsteroids.pop_back(); 
         }
     }
+
+    // Itera de trás para frente para permitir a remoção segura dos mísseis
+    for (int i = g_Missiles.size() - 1; i >= 0; --i) {
+        Missile &missile = g_Missiles[i];
+        
+        if (!missile.isActive) continue;
+
+        BoundingSphere missileSphere = {missile.position, MISSILE_RADIUS};
+        
+        bool hit = false;
+        
+        // =======================================================
+        // Colisão Nave/Inimigo (Missil vs. Nave/Inimigo)
+        // =======================================================
+
+        if (missile.ownerId == 0) { // Míssil da Nave -> Colide com Inimigos
+            for (int j = g_Enemies.size() - 1; j >= 0; --j) {
+                Enemy &enemy = g_Enemies[j];
+                BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
+
+                if (checkSphereSphereCollision(missileSphere, enemySphere)) {
+                    printf("Inimigo atingido por míssil da Nave!\n");
+                    
+                    // Destrói o inimigo
+                    std::swap(g_Enemies[j], g_Enemies.back());
+                    g_Enemies.pop_back();
+                    hit = true;
+                    break; 
+                }
+            }
+        } else { // Míssil do Inimigo -> Colide com a Nave
+            BoundingSphere aircraftSphere = getAircraftBoundingSphere(g_AircraftPosition);
+            if (checkSphereSphereCollision(missileSphere, aircraftSphere)) {
+                printf("Nave atingida por míssil inimigo!\n");
+                
+                // Aplica dano (se o jogo ainda não acabou)
+                if (!g_IsGameOver) {
+                    g_AircraftLife -= 1;
+                    printf("Vida restante: %d\n", g_AircraftLife);
+                
+                    if (isGameOver()) {
+                        printf("GAME OVER! A nave foi destruída.\n");
+                    }
+                }
+                hit = true;
+            }
+        }
+        
+        // =======================================================
+        // Colisão Missil vs. Asteroides Aleatórios (Esfera vs. Cilindro)
+        // =======================================================
+
+        // Itera sobre os asteroides aleatórios (g_RandomAsteroids)
+        for (int j = g_RandomAsteroids.size() - 1; j >= 0; --j) 
+        {
+            glm::vec4 asteroidPos = g_RandomAsteroids[j];
+            BoundingCylinder asteroidCylinder = getAsteroidBoundingCylinder(asteroidPos);
+            
+            if (checkCylinderSphereCollision(asteroidCylinder, missileSphere)) { 
+                
+                printf("Míssil atingiu um Asteroide Aleatório e foi destruído.\n");
+                
+                std::swap(g_RandomAsteroids[j], g_RandomAsteroids.back());
+                g_RandomAsteroids.pop_back(); 
+                
+                hit = true;
+                break; 
+            }
+        }
+
+
+        if (hit) {
+            missile.isActive = false;
+            std::swap(g_Missiles[i], g_Missiles.back());
+            g_Missiles.pop_back();
+        }
+    }
 }
 
 glm::vec4 NormalizeVector(glm::vec4 v) {
@@ -2362,4 +2527,63 @@ void initRandomAsteroids() {
         g_RandomAsteroids.push_back(asteroidPos);
     }
     printf("%d Asteroides aleatórios inicializados.\n", numRandomAsteroids);
+}
+
+void FireMissile(const glm::vec4& startPos, const glm::vec4& direction, int ownerId) {
+    Missile m;
+    m.position = startPos;
+    m.forward = direction; 
+    m.forward.w = 0.0f; 
+    m.speed = missileSpeed;
+    m.fixedDistance = 16.0f; 
+    m.isActive = true;
+    m.ownerId = ownerId;
+    m.lifeTime = missileLifespan;
+
+    g_Missiles.push_back(m);
+}
+
+void updateMissiles(float tprev, float tnow) {
+    float delta_t = tnow - tprev;
+    float fixedDistance = 16.0f; 
+
+    for (auto it = g_Missiles.begin(); it != g_Missiles.end();) {
+        Missile &m = *it;
+
+        if (!m.isActive) {
+            it = g_Missiles.erase(it);
+            continue;
+        }
+
+        m.lifeTime -= delta_t;
+        if (m.lifeTime <= 0.0f) {
+            m.isActive = false;
+            it = g_Missiles.erase(it);
+            continue;
+        }
+
+        glm::vec4 currentPos = m.position;
+        glm::vec4 up_vec = NormalizeVector(currentPos - moon_position);
+
+        // O míssil avança na direção 'forward'
+        glm::vec4 right_vec = NormalizeVector(crossproduct(up_vec, m.forward));
+        
+        // Angulo de avanço na esfera (usando o vetor UP e o vetor RIGHT)
+        float angle_of_advance = m.speed * delta_t * 0.05f; 
+        glm::mat4 moveMatrix = Matrix_Rotate(angle_of_advance, right_vec); 
+
+        glm::vec4 relativePosition = currentPos - moon_position;
+        relativePosition = moveMatrix * relativePosition;
+        
+        // Reprojetar na distância fixa de órbita
+        glm::vec4 finalDir = relativePosition; finalDir.w = 0.0f;
+        finalDir = NormalizeVector(finalDir);
+        m.position = moon_position + (finalDir * fixedDistance);
+        m.position.w = 1.0f;
+        
+        // A direção FORWARD também precisa ser girada para acompanhar a curva.
+        m.forward = NormalizeVector(moveMatrix * m.forward);
+
+        it++;
+    }
 }
