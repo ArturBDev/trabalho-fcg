@@ -2281,16 +2281,29 @@ void showText(GLFWwindow* window){
     float margin_x = 0.05f;
     float margin_y_top = 0.05f;
     float margin_y_bottom = 0.95f; 
+
+    float est_width = 15.0f * TextRendering_CharWidth(window);
     
     if (g_AircraftLife <= 0) {
-        TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -0.4f, 0.0f, 2.0f);
-        TextRendering_PrintString(window, "Pressione R para reiniciar", -0.3f, -0.1f, 1.5f);
+        TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
+        float current_y = -1.0f + margin_y_top; // Começa na margem inferior, subindo.
+
+        TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad; // Move para cima para a próxima linha
+        
+        TextRendering_PrintString(window, "Pressione R para reiniciar", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
     } else if (g_Checkpoints.empty()) {
-        TextRendering_PrintString(window, "PARABÉNS! VOCÊ VENCEU! (Pressione ESC para sair)", -0.5f, 0.0f, 2.0f);
-        TextRendering_PrintString(window, "Pressione R para reiniciar", -0.3f, -0.1f, 1.5f);
+        TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
+        float current_y = -1.0f + margin_y_top; // Começa na margem inferior, subindo.
+
+        TextRendering_PrintString(window, "PARABENS! VOCE VENCEU! (Pressione ESC para sair)", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad; // Move para cima para a próxima linha
+        
+        TextRendering_PrintString(window, "Pressione R para reiniciar", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
     } else if (!g_IsGameOver) {
         snprintf(buffer, 80, "Vida: %d", g_AircraftLife);
-        float est_width = 15.0f * TextRendering_CharWidth(window);
         
         TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
         float current_y = -1.0f + margin_y_top; // Começa na margem inferior, subindo.
@@ -2304,7 +2317,7 @@ void showText(GLFWwindow* window){
         TextRendering_PrintString(window, "Use W,A,S,D para mover a aeronave", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
 
-        TextRendering_PrintString(window, "Use o mouse para olhar ao redor (câmera livre)", -1.0f + margin_x, current_y, 1.0f);
+        TextRendering_PrintString(window, "Use o mouse para olhar ao redor (camera livre)", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
         
         TextRendering_PrintString(window, "Pressione I para iniciar/pausar o jogo", -1.0f + margin_x, current_y, 1.0f);
