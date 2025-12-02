@@ -1723,8 +1723,7 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
 
     if ( ellapsed_seconds > 1.0f )
     {
-        numchars = snprintf(buffer, 20, "%.2f fps", ellapsed_frames / ellapsed_seconds);
-    
+     
         old_seconds = seconds;
         ellapsed_frames = 0;
     }
@@ -2285,7 +2284,6 @@ void showText(GLFWwindow* window){
     float est_width = 15.0f * TextRendering_CharWidth(window);
     
     if (g_AircraftLife <= 0) {
-        TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
         float current_y = -1.0f + margin_y_top; // Começa na margem inferior, subindo.
 
         TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -1.0f + margin_x, current_y, 1.0f);
@@ -2294,7 +2292,6 @@ void showText(GLFWwindow* window){
         TextRendering_PrintString(window, "Pressione R para reiniciar", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
     } else if (g_Checkpoints.empty()) {
-        TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
         float current_y = -1.0f + margin_y_top; // Começa na margem inferior, subindo.
 
         TextRendering_PrintString(window, "PARABENS! VOCE VENCEU! (Pressione ESC para sair)", -1.0f + margin_x, current_y, 1.0f);
