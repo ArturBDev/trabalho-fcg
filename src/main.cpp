@@ -569,7 +569,7 @@ int main(int argc, char* argv[])
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
         float farplane  = -60.0f; // Posição do "far plane"
-        
+
                 if (g_UsePerspectiveProjection)
         {
             // Projeção Perspectiva.
@@ -2034,7 +2034,7 @@ float randomFloat(float min, float max) {
 }
 
 void InitEnemies() {    
-    for(int i = 0; i < 0; i++) {
+    for(int i = 0; i < 3; i++) {
         Enemy e;
         
         // Posição aleatória na esfera 
