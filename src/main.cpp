@@ -270,9 +270,6 @@ GLint g_bbox_max_uniform;
 GLint g_gouraud_uniform;
 GLint g_is_damaged_uniform;
 
-
-
-
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
 
@@ -331,6 +328,9 @@ const float enemyShotSpeed = 7.0f; // Inimigo atira a cada 5 segundos
 // Feedback de dano
 float g_DamageTimer = 0.0f;
 const float damageDuration = 0.2f; // Nave fica vermelha por 0.2 segundos
+
+// Voo livre
+bool g_FreeWorld = false;
 
 int main(int argc, char* argv[])
 {
@@ -540,12 +540,14 @@ int main(int argc, char* argv[])
             camera_view_vector = camera_lookat_l - camera_position_c;           
         }
 
-        if (!isGameOver() && isIPressed) 
+        if (!isGameOver() && isIPressed && !g_FreeWorld) 
         {
             moveAircraft(tprev, tnow, g_AircraftPosition);
             moveEnemies(tprev, tnow);
             updateMissiles(tprev, tnow); 
             processCollisions();
+        } else if (g_FreeWorld && !isIPressed){
+            moveAircraft(tprev, tnow, g_AircraftPosition);
         }
 
         float delta_t = tnow - tprev;
@@ -1658,6 +1660,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     {
         g_UseFirstPersonCamera = !g_UseFirstPersonCamera;
     }
+    
+    if (key == GLFW_KEY_B && action == GLFW_PRESS)
+    {
+        g_FreeWorld = !g_FreeWorld;
+    }
 
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
         float tnow = glfwGetTime();
@@ -2437,6 +2444,9 @@ void showText(GLFWwindow* window){
         current_y += pad;
 
         TextRendering_PrintString(window, "Use o mouse para olhar ao redor (camera livre)", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
+
+        TextRendering_PrintString(window, "Pressione B para voo livre (desmonstração)", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
         
         TextRendering_PrintString(window, "Pressione I para iniciar/pausar o jogo", -1.0f + margin_x, current_y, 1.0f);
