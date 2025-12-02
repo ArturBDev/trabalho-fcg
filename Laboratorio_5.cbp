@@ -370,7 +370,8 @@
 		<Unit filename="include/stb_image.h" />
 		<Unit filename="include/tiny_obj_loader.h" />
 		<Unit filename="include/utils.h" />
-		<Unit filename="src/glad.c">
+		<Unit filename="include/utils.h" />
+		<Unit filename="src/collisions.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/main.cpp" />
@@ -379,6 +380,7 @@
 		<Unit filename="src/stb_image.cpp" />
 		<Unit filename="src/textrendering.cpp" />
 		<Unit filename="src/tiny_obj_loader.cpp" />
+		<Unit filename="src/collisions.cpp" />
 		<Extensions>
 			<code_completion />
 			<envvars />
