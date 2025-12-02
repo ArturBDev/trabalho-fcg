@@ -285,7 +285,7 @@ const float turnRate = 2.0f; // Velocidade máxima de giro (em radianos/segundo)
 const float enemySpeed = 5.0f; // Velocidade do inimigo
 
 // Variaveis globais de controle da Câmera Livre
-bool g_UseFreeCamera = false; 
+bool g_UseFirstPersonCamera = false; 
 
 int g_AircraftLife = 3; 
 bool g_IsGameOver = false;
@@ -455,7 +455,7 @@ int main(int argc, char* argv[])
         glm::vec4 camera_view_vector;
 
 
-        if (!g_UseFreeCamera){
+        if (!g_UseFirstPersonCamera){
             up_vec = NormalizeVector(g_AircraftPosition - moon_position);
             front_vec = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
                 
@@ -490,33 +490,23 @@ int main(int argc, char* argv[])
             up_vec = NormalizeVector(g_AircraftPosition - moon_position);
             front_vec = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
                 
-            // Atualizamos a global para evitar drift 
             g_AircraftForward = front_vec; 
 
             right_vec = NormalizeVector(crossproduct(up_vec, front_vec)); 
             
-            // O ponto para onde a câmera olha (LookAt) é a própria nave
-            camera_lookat_l = g_AircraftPosition;
+            float offset_forward = 0.15f; 
+            float offset_up      = 0.235f; 
+            
+            camera_position_c = g_AircraftPosition 
+                                + (front_vec * offset_forward) 
+                                + (up_vec    * offset_up); 
 
-            // Calculamos o deslocamento local baseado no mouse (Theta/Phi) e Distância
-            float r = 0.1f;
-            float offset_y_local = r * sin(g_CameraPhi);                  // Altura relativa à nave
-            float offset_x_local = r * cos(g_CameraPhi) * sin(g_CameraTheta); // Lado relativo
-            float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
 
-            // usando os vetores da nave (Right, Up, Front) como base.
-            glm::vec4 final_offset = (right_vec * offset_x_local) + 
-                                    (up_vec    * offset_y_local) + 
-                                    (front_vec * offset_z_local);
+            camera_lookat_l = camera_position_c + front_vec;
 
-            // A posição da câmera é: Posição da Nave - Deslocamento Calculado
-            camera_position_c = camera_lookat_l - final_offset;
-
-            // O vetor "Cima" da câmera agora deve ser a normal da Lua, não o Y global (0,1,0)
             camera_up_vector = up_vec;
 
-            // Gera a matriz View
-            camera_view_vector = camera_lookat_l - camera_position_c;            
+            camera_view_vector = camera_lookat_l - camera_position_c;           
         }
 
         if (!isGameOver() && isIPressed) 
@@ -1599,7 +1589,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
     {
-        g_UseFreeCamera = !g_UseFreeCamera;
+        g_UseFirstPersonCamera = !g_UseFirstPersonCamera;
     }
 
     // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".

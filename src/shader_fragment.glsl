@@ -182,7 +182,7 @@ void main()
     if(object_id == SKYBOX || object_id == CHECKPOINT_SPHERE){
         color.rgb = Kd0; 
     }  else if(gouraud){
-        color.rgb =  color_v.rgb;
+        color.rgb = Kd0 * color_v.rgb;
     } 
     else {        
         // Define a Refletância Difusa como a cor da textura (Kd0)
