@@ -2457,7 +2457,6 @@ void initRandomAsteroids() {
 
         g_RandomAsteroids.push_back(asteroidPos);
     }
-    printf("%d Asteroides aleatórios inicializados.\n", numRandomAsteroids);
 }
 
 
