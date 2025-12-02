@@ -179,7 +179,6 @@ void InitEnemies();
 void moveEnemies(float tprev, float tnow);
 glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t);
 void processCollisions();
-void moveFreeCamera(float delta_t);
 glm::vec4 NormalizeVector(glm::vec4 v);
 bool isGameOver();
 void resetGame();
@@ -286,11 +285,10 @@ const float turnRate = 2.0f; // Velocidade máxima de giro (em radianos/segundo)
 const float enemySpeed = 5.0f; // Velocidade do inimigo
 
 // Variaveis globais de controle da Câmera Livre
-glm::vec4 g_FreeCameraPosition = glm::vec4(0.0f, 10.0f, 0.0f, 1.0f); 
-glm::vec4 g_FreeCameraFront    = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);  
 bool g_UseFreeCamera = false; 
-float g_FreeCameraYaw = 0.0f;
-float g_FreeCameraPitch = 0.0f;
+// Variáveis de Posição/Estado da Câmera
+glm::vec4 last_cam_pos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Ponto Look-At (Look-At Mode)
+glm::vec4 aux_cam = glm::vec4(0.0f, 0.0f, 3.0f, 1.0f);      // Posição Câmera Livre (Free Camera Mode)
 
 int g_AircraftLife = 3; 
 bool g_IsGameOver = false;
@@ -459,30 +457,8 @@ int main(int argc, char* argv[])
         glm::vec4 camera_lookat_l;
         glm::vec4 camera_view_vector;
 
-        if (g_UseFreeCamera)
-        {
-            // Câmera Livre
-            camera_position_c = g_FreeCameraPosition; 
 
-            glm::vec4 vector_to_center = camera_position_c - moon_position;
-            vector_to_center.w = 0.0f;
-            float current_distance = norm(vector_to_center);
-            float min_allowed_distance = MOON_RADIUS;
-
-            if (current_distance < min_allowed_distance)
-            {
-                glm::vec4 direction_from_center = NormalizeVector(vector_to_center);
-                camera_position_c = moon_position + direction_from_center * min_allowed_distance;
-                camera_position_c.w = 1.0f;
-            }
-
-            camera_view_vector = g_FreeCameraFront;          
-            camera_up_vector  = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); 
-
-            moveFreeCamera(tnow - tprev);
-        }
-        else
-        {
+        if (!g_UseFreeCamera){
             up_vec = NormalizeVector(g_AircraftPosition - moon_position);
             front_vec = NormalizeVector(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
                 
@@ -513,21 +489,25 @@ int main(int argc, char* argv[])
 
             // Gera a matriz View
             camera_view_vector = camera_lookat_l - camera_position_c;
+            last_cam_pos = camera_position_c; // Atualiza a última posição válida da câmera
+        } else {
 
-            if (!isGameOver() && isIPressed) 
-            {
-                moveAircraft(tprev, tnow, g_AircraftPosition);
-                moveEnemies(tprev, tnow);
-                processCollisions();
-            }
-
-            float delta_t = tnow - tprev;
-            g_Asteroid_t += asteroidSpeed * delta_t; 
             
-            if (g_Asteroid_t >= 1.0f) {
-                // Reinicia o tempo para loopar a curva local
-                g_Asteroid_t = 0.0f;
-            }
+        }
+
+        if (!isGameOver() && isIPressed) 
+        {
+            moveAircraft(tprev, tnow, g_AircraftPosition);
+            moveEnemies(tprev, tnow);
+            processCollisions();
+        }
+
+        float delta_t = tnow - tprev;
+        g_Asteroid_t += asteroidSpeed * delta_t; 
+        
+        if (g_Asteroid_t >= 1.0f) {
+            // Reinicia o tempo para loopar a curva local
+            g_Asteroid_t = 0.0f;
         }
 
         view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -1596,17 +1576,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
     {
         g_UseFreeCamera = !g_UseFreeCamera;
-    
-        // Se mudou para a câmera livre, inicializa sua posição na posição da aeronave
-        if (g_UseFreeCamera)
-        {
-            float g_CameraDistance = 5.0f; 
-            g_FreeCameraPosition = g_AircraftPosition - g_AircraftForward * g_CameraDistance + glm::vec4(0.0f, 0.5f, 0.0f, 0.0f);
-            
-            g_FreeCameraPosition.w = 1.0f; 
-            
-            g_FreeCameraFront = NormalizeVector(g_AircraftForward);
-        }
     }
 
     // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
@@ -2256,56 +2225,7 @@ glm::vec4 NormalizeVector(glm::vec4 v) {
     return v;
 }
 
-// FONTE: https://learnopengl.com/Getting-started/Camera
-void moveFreeCamera(float delta_t)
-{
-    float cameraSpeed = 5.0f * delta_t; 
 
-    g_FreeCameraYaw = -glm::degrees(g_CameraTheta) + 90.0f;
-    g_FreeCameraPitch = glm::degrees(g_CameraPhi);
-    
-    if (g_FreeCameraPitch > 89.0f)
-        g_FreeCameraPitch = 89.0f;
-    if (g_FreeCameraPitch < -89.0f)
-        g_FreeCameraPitch = -89.0f;
-        
-    float yaw_rad = glm::radians(g_FreeCameraYaw);
-    float pitch_rad = glm::radians(g_FreeCameraPitch);
-    
-    glm::vec4 front;
-    front.x = cos(yaw_rad) * cos(pitch_rad);
-    front.y = sin(pitch_rad);
-    front.z = sin(yaw_rad) * cos(pitch_rad);
-    front.w = 0.0f;
-    g_FreeCameraFront = NormalizeVector(front);
-
-    glm::vec4 up_global = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); 
-    glm::vec4 right = NormalizeVector(crossproduct(up_global, g_FreeCameraFront)); 
-    
-    glm::vec4 next_camera_position = g_FreeCameraPosition; 
-
-    if (isWPressed)
-        next_camera_position += g_FreeCameraFront * cameraSpeed;
-    if (isSPressed)
-        next_camera_position -= g_FreeCameraFront * cameraSpeed;
-
-    if (isDPressed) // D para Right
-        next_camera_position -= right * cameraSpeed;
-    if (isAPressed) // A para Left
-        next_camera_position += right * cameraSpeed;
-    
-    glm::vec4 vector_to_center = next_camera_position - moon_position;
-    vector_to_center.w = 0.0f;
-    float current_distance = norm(vector_to_center);
-    float min_allowed_distance = MOON_RADIUS;
-
-    if (current_distance >= min_allowed_distance)
-    {
-        g_FreeCameraPosition = next_camera_position;
-    }
-
-    g_FreeCameraPosition.w = 1.0f;
-}
 
 bool isGameOver() {
     if (g_AircraftLife <= 0) {
