@@ -2404,6 +2404,9 @@ void showText(GLFWwindow* window){
         TextRendering_PrintString(window, "C para alternar câmera livre", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
 
+        TextRendering_PrintString(window, "Space para atirar", -1.0f + margin_x, current_y, 1.0f);
+        current_y += pad;
+
         TextRendering_PrintString(window, "Use W,A,D para mover a aeronave", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
 
