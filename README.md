@@ -14,7 +14,7 @@ Este trabalho foi desenvolvido por mim, demonstrando o domínio de todos os conc
 
 ##  Uso de Ferramentas de Inteligência Artificial
 
-Utilizei a ferramenta **Gemini/ChatGPT** como um **poderoso assistente de programação e consulta**. A IA foi fundamental para **entender os cálculos complexos**, especialmente na base das transformações geométricas, calcula ods vetores da nave para orbitar em volta da lua, e auxiliar na **implementação dos algoritmos de colisão** (como o teste Cilindro-Esfera). Também auxiliou na lógica de *spawn* para **inimigos** e **checkpoints**.
+Utilizei a ferramenta **Gemini/ChatGPT** como um **poderoso assistente de programação e consulta**. A IA foi fundamental para **entender os cálculos complexos**, especialmente na base das transformações geométricas, calculo dos vetores da nave para orbitar em volta da lua, e auxiliar na **implementação dos algoritmos de colisão** (como o teste Cilindro-Esfera). Também auxiliou na lógica de *spawn* para **inimigos** e **checkpoints**.
 
 A análise crítica é que a IA é um **bom apoio** e acelerou a compreensão conceitual. No entanto, ela **não foi/é capaz de desenvolver a complexidade total** do projeto por conta própria, na maioria das vezes saindo do escopo, exigindo intervenção e correção humana contínua. Em suma, é um bom apoio.
 
