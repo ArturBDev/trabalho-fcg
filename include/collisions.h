@@ -5,6 +5,8 @@
 #include <glm/vec4.hpp>
 #include <cmath> 
 
+//Fonte: Gemini
+
 /**
  * Representa uma Esfera Delimitadora (Bounding Sphere).
  */

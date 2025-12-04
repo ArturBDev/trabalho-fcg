@@ -58,9 +58,9 @@
 #define HEALTH_BAR_BACKGROUND 5
 #define HEALTH_BAR_FOREGROUND 6
 #define ASTEROID 7
-#define MISSILE 8 
+#define MISSILE 8
 
-#define MAX_LIFE 3 
+#define MAX_LIFE 3
 #define M_PI_2 1.57079632679489661923
 #define M_PI 3.14159265358979323846
 
@@ -281,7 +281,7 @@ glm::vec4 g_AircraftPosition_Prev = glm::vec4(g_AircraftPosition); // Inicializa
 // Lista global de inimigos
 std::vector<Enemy> g_Enemies;
 
-// Flags para controle de movimento 
+// Flags para controle de movimento
 float isWPressed = false;
 float isAPressed = false;
 float isDPressed = false;
@@ -292,31 +292,31 @@ glm::vec4 moon_position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 std::vector<glm::vec4> g_Checkpoints; // Posições dos 5 Checkpoints
 
-const float turnRate = 2.0f; // Velocidade máxima de giro 
+const float turnRate = 2.0f; // Velocidade máxima de giro
 const float enemySpeed = 5.0f; // Velocidade do inimigo
 
 // Variaveis globais de controle da Câmera Livre
-bool g_UseFirstPersonCamera = false; 
+bool g_UseFirstPersonCamera = false;
 
-int g_AircraftLife = 3; 
+int g_AircraftLife = 3;
 bool g_IsGameOver = false;
 
-glm::vec4 g_Asteroid_P0 = glm::vec4(21.0f, 0.0f, 0.0f, 1.0f);   
-glm::vec4 g_Asteroid_P1 = glm::vec4(17.0f, 4.0f, 4.0f, 1.0f);   
-glm::vec4 g_Asteroid_P2 = glm::vec4(25.0f, 4.0f, -4.0f, 1.0f); 
-glm::vec4 g_Asteroid_P3 = glm::vec4(21.0f, 0.0f, 0.0f, 1.0f);    
+glm::vec4 g_Asteroid_P0 = glm::vec4(21.0f, 0.0f, 0.0f, 1.0f);
+glm::vec4 g_Asteroid_P1 = glm::vec4(17.0f, 4.0f, 4.0f, 1.0f);
+glm::vec4 g_Asteroid_P2 = glm::vec4(25.0f, 4.0f, -4.0f, 1.0f);
+glm::vec4 g_Asteroid_P3 = glm::vec4(21.0f, 0.0f, 0.0f, 1.0f);
 float g_Asteroid_t = 0.0f;
-const float asteroidSpeed = 0.50f; 
-const float asteroidScale = 0.0004f; 
+const float asteroidSpeed = 0.50f;
+const float asteroidScale = 0.0004f;
 
-std::vector<glm::vec4> g_RandomAsteroids; 
-const int numRandomAsteroids = 8; 
+std::vector<glm::vec4> g_RandomAsteroids;
+const int numRandomAsteroids = 8;
 
 // Variável Global para armazenar todos os mísseis
 std::vector<Missile> g_Missiles;
 const float missileSpeed = 20.0f;
 const float missileLifespan = 2.0f; // 2 segundos de vida
-const float missileRadius = 0.15f; 
+const float missileRadius = 0.15f;
 
 // Variáveis de controle de tiro da nave
 float g_PlayerShotTimer = 0.0f;
@@ -439,12 +439,12 @@ int main(int argc, char* argv[])
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-    float tprev = glfwGetTime(); 
+    float tprev = glfwGetTime();
     float tnow;
-    
+
     InitEnemies();
-    initCheckpoints(); 
-    initRandomAsteroids(); 
+    initCheckpoints();
+    initRandomAsteroids();
 
     bool gouraud = false;
 
@@ -471,8 +471,8 @@ int main(int argc, char* argv[])
 
         tnow = glfwGetTime();
 
-        glm::mat4 model = Matrix_Identity(); 
-        glm::mat4 aircraft = Matrix_Identity(); 
+        glm::mat4 model = Matrix_Identity();
+        glm::mat4 aircraft = Matrix_Identity();
 
         glm::mat4 view;
         glm::vec4 camera_position_c;
@@ -486,11 +486,11 @@ int main(int argc, char* argv[])
         if (!g_UseFirstPersonCamera){
             up_vec = normalizedVec(g_AircraftPosition - moon_position);
             front_vec = normalizedVec(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
-                
-            // Atualizamos a global para evitar drift 
-            g_AircraftForward = front_vec; 
 
-            right_vec = normalizedVec(crossproduct(up_vec, front_vec));  
+            // Atualizamos a global para evitar drift
+            g_AircraftForward = front_vec;
+
+            right_vec = normalizedVec(crossproduct(up_vec, front_vec));
 
             // O ponto para onde a câmera olha (LookAt) é a própria nave
             camera_lookat_l = g_AircraftPosition;
@@ -502,8 +502,8 @@ int main(int argc, char* argv[])
             float offset_z_local = r * cos(g_CameraPhi) * cos(g_CameraTheta); // Distância para trás
 
             // usando os vetores da nave (Right, Up, Front) como base.
-            glm::vec4 final_offset = (right_vec * offset_x_local) + 
-                                    (up_vec    * offset_y_local) + 
+            glm::vec4 final_offset = (right_vec * offset_x_local) +
+                                    (up_vec    * offset_y_local) +
                                     (front_vec * offset_z_local);
 
             // A posição da câmera é: Posição da Nave - Deslocamento Calculado
@@ -518,33 +518,33 @@ int main(int argc, char* argv[])
             // mesmo processo de cima
             up_vec = normalizedVec(g_AircraftPosition - moon_position);
             front_vec = normalizedVec(g_AircraftForward - dotproduct(g_AircraftForward, up_vec) * up_vec);
-                
-            g_AircraftForward = front_vec; 
 
-            right_vec = normalizedVec(crossproduct(up_vec, front_vec)); 
-            
+            g_AircraftForward = front_vec;
+
+            right_vec = normalizedVec(crossproduct(up_vec, front_vec));
+
             // variáveis para primeira pessoa
-            float offset_forward = 0.15f; 
-            float offset_up      = 0.235f; 
-            
-            camera_position_c = g_AircraftPosition 
-                                + (front_vec * offset_forward) 
-                                + (up_vec    * offset_up); 
+            float offset_forward = 0.15f;
+            float offset_up      = 0.235f;
+
+            camera_position_c = g_AircraftPosition
+                                + (front_vec * offset_forward)
+                                + (up_vec    * offset_up);
 
             // camera esta no bico da nave
             camera_lookat_l = camera_position_c + front_vec;
 
             camera_up_vector = up_vec;
 
-            camera_view_vector = camera_lookat_l - camera_position_c;           
+            camera_view_vector = camera_lookat_l - camera_position_c;
         }
 
         // se o jogo nao acabou, está inicializado e nao esta em free flight
-        if (!isGameOver() && isIPressed && !g_FreeWorld) 
+        if (!isGameOver() && isIPressed && !g_FreeWorld)
         {
             moveAircraft(tprev, tnow, g_AircraftPosition);
             moveEnemies(tprev, tnow);
-            updateMissiles(tprev, tnow); 
+            updateMissiles(tprev, tnow);
             processCollisions();
         } else if (g_FreeWorld && !isIPressed){ // se o jogo esta em free flight nao pode estar iniciado
             moveAircraft(tprev, tnow, g_AircraftPosition);
@@ -552,8 +552,8 @@ int main(int argc, char* argv[])
 
         // calculo delta t para deslocamentos
         float delta_t = tnow - tprev;
-        g_Asteroid_t += asteroidSpeed * delta_t; 
-        
+        g_Asteroid_t += asteroidSpeed * delta_t;
+
         // curva de bezier
         if (g_Asteroid_t >= 1.0f) {
             // Reinicia o tempo para loopar a curva local
@@ -561,7 +561,7 @@ int main(int argc, char* argv[])
         }
 
         view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
-            
+
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
@@ -611,16 +611,16 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SKYBOX);
         glDisable(GL_DEPTH_TEST);
-        glDisable(GL_CULL_FACE);   
+        glDisable(GL_CULL_FACE);
         DrawVirtualObject("the_sphere");
-        glActiveTexture(GL_TEXTURE0); 
+        glActiveTexture(GL_TEXTURE0);
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
 
 
         // para alinhar a nave com a lua
         glm::mat4 rotation_align = glm::mat4(1.0f);
-        rotation_align[0] = right_vec, 0.0f; // Coluna 0: Eixo X (Right)
+        rotation_align[0] = right_vec; // Coluna 0: Eixo X (Right)
         rotation_align[1] = up_vec;    // Coluna 1: Eixo Y (Up)
         rotation_align[2] = front_vec; // Coluna 2: Eixo Z (Front)
 
@@ -636,10 +636,10 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, AIRCRAFT);
 
         // desenha todas as peças do objeto aircraft
-        for (size_t i = 0; i < aircraft_model.shapes.size(); i++) 
+        for (size_t i = 0; i < aircraft_model.shapes.size(); i++)
         {
             const char* shapeName = aircraft_model.shapes[i].name.c_str();
-            
+
             DrawVirtualObject(shapeName);
         }
 
@@ -658,37 +658,37 @@ int main(int argc, char* argv[])
             model = Matrix_Translate(enemy_pos.x, enemy_pos.y, enemy_pos.z)
                     * rotation_align_enemy
                     * Matrix_Scale(0.05f, 0.05f, 0.05f)
-                    * Matrix_Rotate_Y(M_PI_2 * 2); 
+                    * Matrix_Rotate_Y(M_PI_2 * 2);
 
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-            glUniform1i(g_object_id_uniform, ENEMY); 
+            glUniform1i(g_object_id_uniform, ENEMY);
 
             for (size_t i = 0; i < aircraft_model.shapes.size(); i++) {
                 DrawVirtualObject(aircraft_model.shapes[i].name.c_str());
             }
         }
 
-        //dedsenha os checkpoints 
+        //dedsenha os checkpoints
         for (const auto &checkpoint_pos : g_Checkpoints)
         {
             glm::mat4 checkpoint_model = Matrix_Translate(checkpoint_pos.x, checkpoint_pos.y, checkpoint_pos.z)
-                                    * Matrix_Scale(0.25f/15.0f, 0.25f/15.0f, 0.25f/15.0f); 
-                                    
+                                    * Matrix_Scale(0.25f/15.0f, 0.25f/15.0f, 0.25f/15.0f);
+
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(checkpoint_model));
-            glUniform1i(g_object_id_uniform, CHECKPOINT_SPHERE); 
-            DrawVirtualObject("the_sphere"); 
+            glUniform1i(g_object_id_uniform, CHECKPOINT_SPHERE);
+            DrawVirtualObject("the_sphere");
         }
 
         // 1. Calcula a posição na Curva de Bézier.
         glm::vec4 pos = evaluateBezier(g_Asteroid_P0, g_Asteroid_P1, g_Asteroid_P2, g_Asteroid_P3, g_Asteroid_t);
 
         // desenha o asteroid com am ovimentação de bezier
-        model = Matrix_Translate(pos.x, pos.y, pos.z) 
-                * Matrix_Scale(asteroidScale, asteroidScale, asteroidScale); 
-        
+        model = Matrix_Translate(pos.x, pos.y, pos.z)
+                * Matrix_Scale(asteroidScale, asteroidScale, asteroidScale);
+
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, ASTEROID); 
-        DrawVirtualObject("10464_Asteroid_v1"); 
+        glUniform1i(g_object_id_uniform, ASTEROID);
+        DrawVirtualObject("10464_Asteroid_v1");
 
         // ativa gouraud para a lua
         gouraud = true;
@@ -705,15 +705,15 @@ int main(int argc, char* argv[])
         glUniform1i(g_gouraud_uniform, gouraud);
 
         // desenhando o HUD ("progress bar" de vida)
-        if (g_AircraftLife > 0 && !isGameOver)
+        if (g_AircraftLife > 0)
         {
             // Desativamos testes 3D (Z-buffer e Culling) para desenhar o HUD em 2D
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_CULL_FACE);
 
             // Matrizes Identidade (espaço NDC, fixo na tela)
-            glm::mat4 life_view = Matrix_Identity(); 
-            glm::mat4 life_projection = Matrix_Identity(); 
+            glm::mat4 life_view = Matrix_Identity();
+            glm::mat4 life_projection = Matrix_Identity();
             glm::mat4 life_model = Matrix_Identity();
 
             glUniformMatrix4fv(g_view_uniform, 1, GL_FALSE, glm::value_ptr(life_view));
@@ -725,27 +725,27 @@ int main(int argc, char* argv[])
             float margin_y = 0.1f;         // Margem da borda superior
 
             float bar_x_center = 1.0f - margin_x - (bar_width_max / 2.0f);
-            
+
             float bar_y_center = 1.0f - margin_y - (bar_height / 2.0f);
 
-            life_model = Matrix_Translate(bar_x_center, bar_y_center, 0.0f) 
-                      * Matrix_Scale(bar_width_max, bar_height, 0.0f); 
-            
+            life_model = Matrix_Translate(bar_x_center, bar_y_center, 0.0f)
+                      * Matrix_Scale(bar_width_max, bar_height, 0.0f);
+
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(life_model));
             glUniform1i(g_object_id_uniform, HEALTH_BAR_BACKGROUND);
-            DrawVirtualObject("the_sphere"); 
+            DrawVirtualObject("the_sphere");
 
             float current_life_ratio = (float)g_AircraftLife / (float)MAX_LIFE;
-            float current_width = bar_width_max * current_life_ratio; 
-            
+            float current_width = bar_width_max * current_life_ratio;
+
             float x_offset_correction = (current_width - bar_width_max) / 2.0f;
-            
+
             life_model = Matrix_Translate(bar_x_center + x_offset_correction, bar_y_center, 0.0f)
                       * Matrix_Scale(current_width, bar_height, 0.0f);
-            
+
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(life_model));
             glUniform1i(g_object_id_uniform, HEALTH_BAR_FOREGROUND);
-            DrawVirtualObject("the_sphere"); 
+            DrawVirtualObject("the_sphere");
 
             // Voltamos às configurações 3D
             glEnable(GL_CULL_FACE);
@@ -761,18 +761,18 @@ int main(int argc, char* argv[])
         // OBS: O asteroid com curva de bezier nao tem gouraud
         gouraud = true;
         glUniform1i(g_gouraud_uniform, gouraud);
-        glUniform1i(g_object_id_uniform, ASTEROID); 
+        glUniform1i(g_object_id_uniform, ASTEROID);
 
         //desenha os asteroides aleatorios
         for (const auto& randomPos : g_RandomAsteroids) {
-            model = Matrix_Translate(randomPos.x, randomPos.y, randomPos.z) 
-                  * Matrix_Scale(asteroidScale, asteroidScale, asteroidScale); 
-            
+            model = Matrix_Translate(randomPos.x, randomPos.y, randomPos.z)
+                  * Matrix_Scale(asteroidScale, asteroidScale, asteroidScale);
+
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             DrawVirtualObject("10464_Asteroid_v1");
         }
-        
-        gouraud = false; 
+
+        gouraud = false;
         glUniform1i(g_gouraud_uniform, gouraud);
 
         // desenha os misseis
@@ -783,7 +783,7 @@ int main(int argc, char* argv[])
             glm::vec4 up_m = normalizedVec(missile_pos - moon_position);
             glm::vec4 front_m = missile.forward;
             glm::vec4 right_m = normalizedVec(crossproduct(up_m, front_m));
-            
+
             glm::mat4 rotation_align_missile = glm::mat4(1.0f);
             rotation_align_missile[0] = right_m;
             rotation_align_missile[1] = up_m;
@@ -791,8 +791,8 @@ int main(int argc, char* argv[])
 
             model = Matrix_Translate(missile_pos.x, missile_pos.y, missile_pos.z)
                   * rotation_align_missile
-                  * Matrix_Scale(0.1f, 0.1f, 0.1f) 
-                  * Matrix_Rotate_Y(M_PI);   
+                  * Matrix_Scale(0.1f, 0.1f, 0.1f)
+                  * Matrix_Rotate_Y(M_PI);
 
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(g_object_id_uniform, AIRCRAFT); // Usa textura da nave
@@ -806,7 +806,7 @@ int main(int argc, char* argv[])
         }
 
         // guarda a posição passada da nave para o calculo de colisão
-        g_AircraftPosition_Prev = g_AircraftPosition; 
+        g_AircraftPosition_Prev = g_AircraftPosition;
 
         tprev = tnow;
 
@@ -961,7 +961,7 @@ void LoadShadersFromFiles()
     g_object_id_uniform  = glGetUniformLocation(g_GpuProgramID, "object_id"); // Variável "object_id" em shader_fragment.glsl
     g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
     g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
-    g_is_damaged_uniform = glGetUniformLocation(g_GpuProgramID, "is_damaged"); 
+    g_is_damaged_uniform = glGetUniformLocation(g_GpuProgramID, "is_damaged");
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(g_GpuProgramID);
@@ -1396,7 +1396,7 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
         fprintf(stderr, "%s", output.c_str());
     }
 
-    // Os "Shader Objects" podem ser marcados para deleção após serem linkados 
+    // Os "Shader Objects" podem ser marcados para deleção após serem linkados
     glDeleteShader(vertex_shader_id);
     glDeleteShader(fragment_shader_id);
 
@@ -1498,23 +1498,23 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
         float dx = xpos - g_LastCursorPosX;
         float dy = ypos - g_LastCursorPosY;
-    
+
         // Atualizamos parâmetros da câmera com os deslocamentos
         g_CameraTheta -= 0.01f*dx;
         g_CameraPhi   += 0.01f*dy;
-    
+
         const float angle_limit = 3.141592f/2.0f; // 90 graus
-        const float epsilon_angle = 0.1f;         // 5 a 6 graus de buffer 
-        
+        const float epsilon_angle = 0.1f;         // 5 a 6 graus de buffer
+
         float phimax = angle_limit - epsilon_angle;
         float phimin = -angle_limit + epsilon_angle;
-        
+
         if (g_CameraPhi > phimax)
             g_CameraPhi = phimax;
 
         if (g_CameraPhi < phimin)
             g_CameraPhi = phimin;
-    
+
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
         g_LastCursorPosX = xpos;
@@ -1526,11 +1526,11 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
         float dx = xpos - g_LastCursorPosX;
         float dy = ypos - g_LastCursorPosY;
-    
+
         // Atualizamos parâmetros da antebraço com os deslocamentos
         g_ForearmAngleZ -= 0.01f*dx;
         g_ForearmAngleX += 0.01f*dy;
-    
+
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
         g_LastCursorPosX = xpos;
@@ -1542,11 +1542,11 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
         float dx = xpos - g_LastCursorPosX;
         float dy = ypos - g_LastCursorPosY;
-    
+
         // Atualizamos parâmetros da antebraço com os deslocamentos
         g_TorsoPositionX += 0.01f*dx;
         g_TorsoPositionY -= 0.01f*dy;
-    
+
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
         g_LastCursorPosX = xpos;
@@ -1599,7 +1599,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         resetGame();
     }
 
-    //Lógica de Movimentação da Aeronave 
+    //Lógica de Movimentação da Aeronave
     if(key == GLFW_KEY_W)
     {
         if (action == GLFW_PRESS)
@@ -1647,7 +1647,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     {
         g_UseFirstPersonCamera = !g_UseFirstPersonCamera;
     }
-    
+
     if (key == GLFW_KEY_B && action == GLFW_PRESS)
     {
         g_FreeWorld = !g_FreeWorld;
@@ -1657,14 +1657,14 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
         float tnow = glfwGetTime();
         if (tnow > g_PlayerShotTimer + shootColdownTimer && isIPressed && !g_IsGameOver) {
-            
+
             g_PlayerShotTimer = tnow; // Resetar o temporizador
-            
+
             glm::vec4 up_vec = normalizedVec(g_AircraftPosition - moon_position);
-            glm::vec4 front_vec = g_AircraftForward; 
-            glm::vec4 right_vec = normalizedVec(crossproduct(up_vec, front_vec)); 
-            
-            glm::vec4 missile_start_pos = g_AircraftPosition + front_vec * 0.5f + right_vec * -0.45f; 
+            glm::vec4 front_vec = g_AircraftForward;
+            glm::vec4 right_vec = normalizedVec(crossproduct(up_vec, front_vec));
+
+            glm::vec4 missile_start_pos = g_AircraftPosition + front_vec * 0.5f + right_vec * -0.45f;
 
             fireMissile(missile_start_pos, front_vec, 0); // ownerId 0 = Nave
         }
@@ -1800,7 +1800,7 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
 
     if ( ellapsed_seconds > 1.0f )
     {
-     
+
         old_seconds = seconds;
         ellapsed_frames = 0;
     }
@@ -1982,9 +1982,10 @@ void PrintObjModelInfo(ObjModel* model)
 
 void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
     float delta_t = tnow - tprev;
-    float speed = 8.0f;         
-    float turn_speed = 3.0f;   
-    float fixedDistance = 16.0f; 
+    float speed = 8.0f;
+    float turn_speed = 3.0f;
+    float fixedDistance = 16.0f;
+
     // calcula os vetores de posição da nave
     glm::vec4 currentPos = aircraft_position;
 
@@ -1996,7 +1997,7 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
 
     // logica de movimentação, baseado na distancia da lua, centro (posição da lua) e alinhando o obj da nave com a tangente da lua para sempre estar alinhado
     if (isWPressed) {
-        float angle = speed * delta_t * 0.05f; 
+        float angle = speed * delta_t * 0.05f;
 
 
         glm::mat4 rotMatrix = Matrix_Rotate(angle, right_vec);
@@ -2008,7 +2009,7 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
         glm::vec4 fwd = g_AircraftForward;
         g_AircraftForward = normalizedVec(rotMatrix * fwd);
 
-        
+
         // permite direita e esquerda, mas com velocidade reduzida
         if (isAPressed || isDPressed) {
             float angle = turn_speed * delta_t;
@@ -2016,14 +2017,14 @@ void moveAircraft(float tprev, float tnow, glm::vec4& aircraft_position) {
 
             // Rotação em torno do eixo UP (Normal da lua)
             glm::mat4 rotMatrix = Matrix_Rotate(angle, up_vec);
-            
+
             glm::vec4 fwd = g_AircraftForward;
             g_AircraftForward = normalizedVec(rotMatrix * fwd);
         }
     }
 
     aircraft_position = currentPos;
-    
+
     glm::vec4 finalDir = normalizedVec(aircraft_position - moon_position);
     aircraft_position = moon_position + (finalDir * fixedDistance);
 }
@@ -2033,31 +2034,31 @@ float randomFloat(float min, float max) {
     return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
 }
 
-void InitEnemies() {    
+void InitEnemies() {
     for(int i = 0; i < 3; i++) {
         Enemy e;
-        
-        // Posição aleatória na esfera 
+
+        // Posição aleatória na esfera
         glm::vec4 randomPos = glm::vec4(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), 0.0f);
-        randomPos = normalizedVec(randomPos) * 16.0f; 
-        
+        randomPos = normalizedVec(randomPos) * 16.0f;
+
         e.position = randomPos + moon_position;
-        
+
         glm::vec4 up = normalizedVec(e.position - moon_position);
         glm::vec4 randomDir = glm::vec4(randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), randomFloat(-1.0f, 1.0f), 0.0f);
-        
+
         e.forward = normalizedVec(randomDir - dotproduct(randomDir, up) * up);
-        
+
         e.speed = 5.0f;
-        e.changeDirTimer = randomFloat(1.0f, 3.0f); 
-        
+        e.changeDirTimer = randomFloat(1.0f, 3.0f);
+
         g_Enemies.push_back(e);
     }
 }
 
 void moveEnemies(float tprev, float tnow) {
     float delta_t = tnow - tprev;
-    float fixedDistance = 16.0f; 
+    float fixedDistance = 16.0f;
 
 
     // mesma ideia do move aircraft, sempre levando em conta a posição da lua, a distancia do centro e tangente com a lua
@@ -2065,16 +2066,16 @@ void moveEnemies(float tprev, float tnow) {
     for (auto &enemy : g_Enemies) {
         glm::vec4 currentPos = enemy.position;
         glm::vec4 up_vec = normalizedVec(currentPos - moon_position);
-        
+
         // Garante que o forward é tangente à superfície
         glm::vec4 projection_fwd = dotproduct(enemy.forward, up_vec) * up_vec;
         enemy.forward = enemy.forward - projection_fwd;
-        enemy.forward = normalizedVec(enemy.forward); 
-        
+        enemy.forward = normalizedVec(enemy.forward);
+
         // Vetor Desejado (Inimigo -> Jogador)
         glm::vec4 vector_to_target = g_AircraftPosition - enemy.position;
-        vector_to_target.w = 0.0f; 
-        
+        vector_to_target.w = 0.0f;
+
         // Projeta o vetor Desejado no plano tangente (impede que ele tente perfurar a Lua)
         projection_fwd = dotproduct(vector_to_target, up_vec) * up_vec;
         glm::vec4 desired_forward = vector_to_target - projection_fwd;
@@ -2082,15 +2083,15 @@ void moveEnemies(float tprev, float tnow) {
 
         // Calcula o eixo e o ângulo para girar de enemy.forward para desired_forward
         glm::vec4 rotation_axis = crossproduct(enemy.forward, desired_forward);
-        
+
         float dot_value = dotproduct(enemy.forward, desired_forward);
-        
+
         // Limita o valor do dotproduct para evitar erros de floating point com acos
         if (dot_value > 1.0f) dot_value = 1.0f;
         if (dot_value < -1.0f) dot_value = -1.0f;
 
         float angle_to_turn = std::acos(dot_value);
-        
+
         // Limita a rotação para a taxa máxima de giro (para um movimento suave)
         if (angle_to_turn > turnRate * delta_t) {
             angle_to_turn = turnRate * delta_t;
@@ -2100,36 +2101,36 @@ void moveEnemies(float tprev, float tnow) {
         glm::mat4 turnMatrix = Matrix_Rotate(angle_to_turn, rotation_axis);
         enemy.forward = normalizedVec(turnMatrix * enemy.forward);
 
-        
+
         glm::vec4 right_vec = normalizedVec(crossproduct(up_vec, enemy.forward));
-        
-        float angle_of_advance = enemySpeed * delta_t * 0.05f; 
-        glm::mat4 moveMatrix = Matrix_Rotate(angle_of_advance, right_vec); 
+
+        float angle_of_advance = enemySpeed * delta_t * 0.05f;
+        glm::mat4 moveMatrix = Matrix_Rotate(angle_of_advance, right_vec);
 
         glm::vec4 relativePosition = currentPos - moon_position;
         relativePosition = moveMatrix * relativePosition;
-        
+
         // Reprojetar na distância fixa de órbita
         glm::vec4 finalDir = relativePosition; finalDir.w = 0.0f;
         finalDir = normalizedVec(finalDir);
         enemy.position = moon_position + (finalDir * fixedDistance);
-        enemy.position.w = 1.0f; 
+        enemy.position.w = 1.0f;
 
         // Timer para o disparo do inimigo
         static float enemy_shot_timer = 0.0f;
-        enemy_shot_timer += delta_t; 
+        enemy_shot_timer += delta_t;
 
         for (auto &enemy : g_Enemies) {
             // Lógica de Disparo do Inimigo
             if (enemy_shot_timer > enemyShotSpeed) {
-                
+
                 glm::vec4 enemy_forward = enemy.forward;
-                glm::vec4 missile_start_pos = enemy.position + enemy_forward * 0.5f; 
-                
-                fireMissile(missile_start_pos, enemy_forward, 1); // ownerId 1 
+                glm::vec4 missile_start_pos = enemy.position + enemy_forward * 0.5f;
+
+                fireMissile(missile_start_pos, enemy_forward, 1); // ownerId 1
             }
         }
-        
+
         if (enemy_shot_timer > enemyShotSpeed) {
             enemy_shot_timer = 0.0f; // Resetar timer após o loop
         }
@@ -2137,7 +2138,7 @@ void moveEnemies(float tprev, float tnow) {
 }
 
 
-// Fórmula da Curva de Bézier Cúbica 
+// Fórmula da Curva de Bézier Cúbica
 glm::vec4 evaluateBezier(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2, glm::vec4 p3, float t) {
     float u = 1.0f - t;
     float tt = t * t;
@@ -2153,26 +2154,20 @@ void processCollisions() {
     // =======================================================
     // Colisão Nave vs. Inimigo (ESFERA-ESFERA)
     // =======================================================
-    
+
     // Cria a Bounding Sphere da Nave
     BoundingSphere aircraftSphere = getAircraftBoundingSphere(g_AircraftPosition);
-    
+
     // Iteramos sobre os inimigos
     for (const auto &enemy : g_Enemies) {
-        
-        // Cria a Bounding Sphere do Inimigo
-        BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
-
         for (int i = g_Enemies.size() - 1; i >= 0; --i) {
-            Enemy &enemy = g_Enemies[i];
-            
             BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
 
-            if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {                
+            if (checkSphereSphereCollision(aircraftSphere, enemySphere)) {
                 // Aplica dano (se o jogo ainda não acabou)
                 if (!g_IsGameOver) {
                     g_AircraftLife -= 1;
-                
+
                     // Verifica Game Over
                     if (isGameOver()) {
                     }
@@ -2180,89 +2175,89 @@ void processCollisions() {
                     g_DamageTimer = damageDuration;
                 }
 
-                // Destrói o inimigo 
+                // Destrói o inimigo
                 std::swap(g_Enemies[i], g_Enemies.back());
-                g_Enemies.pop_back(); 
+                g_Enemies.pop_back();
             }
         }
     }
-    
+
     // =======================================================
     // Coletar Checkpoints (RAIO-ESFERA)
     // =======================================================
-    
+
     // A nave precisa ter se movido para que o raio de trajetória seja válido
     if (g_AircraftPosition_Prev != g_AircraftPosition) {
-        
+
         // 1. Define o Raio (Linha de Movimento da Nave)
         Ray trajectoryRay;
         trajectoryRay.origin = g_AircraftPosition_Prev; // Posição anterior
-        
+
         glm::vec4 movement_vector = g_AircraftPosition - g_AircraftPosition_Prev;
-        movement_vector.w = 0.0f; 
-        
+        movement_vector.w = 0.0f;
+
         trajectoryRay.direction = normalizedVec(movement_vector);
-        float movement_distance = norm(movement_vector); 
+        float movement_distance = norm(movement_vector);
 
         for (int i = g_Checkpoints.size() - 1; i >= 0; --i) {
             glm::vec4 checkpoint_pos = g_Checkpoints[i];
-            
-            BoundingSphere checkpointSphere = getCheckpointBoundingSphere(checkpoint_pos); 
-            
+
+            BoundingSphere checkpointSphere = getCheckpointBoundingSphere(checkpoint_pos);
+
             float t_hit; // Distância do ponto de colisão
 
             if (checkRaySphereCollision(trajectoryRay, checkpointSphere, t_hit)) {
-                
+
                 // Verifica se o ponto de intersecção (t_hit) ocorreu *dentro* do segmento de movimento
-                if (t_hit >= 0.0f && t_hit <= movement_distance) {                     
-                    // Remove o checkpoint coletado 
+                if (t_hit >= 0.0f && t_hit <= movement_distance) {
+                    // Remove o checkpoint coletado
                     std::swap(g_Checkpoints[i], g_Checkpoints.back());
-                    g_Checkpoints.pop_back(); 
-                    
+                    g_Checkpoints.pop_back();
+
                     // Recuperar vida ao pegar um checkpoint
                     if (g_AircraftLife < MAX_LIFE) {
-                         g_AircraftLife++; 
+                         g_AircraftLife++;
                     }
                 }
             }
         }
     }
-    
-    
+
+
     bool collisionOccurred = false;
 
     // =======================================================
     // Colisão Nave vs. TODOS Asteroides (CILINDRO-ESFERA)
     // =======================================================
-    
+
     // Itera de trás para frente para permitir a remoção segura
-    for (int i = g_RandomAsteroids.size() - 1; i >= 0; --i) 
+    for (int i = g_RandomAsteroids.size() - 1; i >= 0; --i)
     {
         glm::vec4 asteroidPos = g_RandomAsteroids[i];
         BoundingCylinder asteroidCylinder = getAsteroidBoundingCylinder(asteroidPos);
-        
-        if (checkCylinderSphereCollision(asteroidCylinder, aircraftSphere)) { 
+
+        if (checkCylinderSphereCollision(asteroidCylinder, aircraftSphere)) {
             if (!g_IsGameOver && !collisionOccurred) {
-                g_AircraftLife -= 1; 
+                g_AircraftLife -= 1;
                 collisionOccurred = true;
 
                 g_DamageTimer = damageDuration;
             }
             std::swap(g_RandomAsteroids[i], g_RandomAsteroids.back());
-            g_RandomAsteroids.pop_back(); 
+            g_RandomAsteroids.pop_back();
         }
     }
 
     // Itera de trás para frente para permitir a remoção segura dos mísseis
     for (int i = g_Missiles.size() - 1; i >= 0; --i) {
         Missile &missile = g_Missiles[i];
-        
+
         if (!missile.isActive) continue;
 
         BoundingSphere missileSphere = {missile.position, missileRadius};
-        
+
         bool hit = false;
-        
+
         // =======================================================
         // Colisão Nave/Inimigo (Missil vs. Nave/Inimigo)
         // =======================================================
@@ -2272,43 +2267,43 @@ void processCollisions() {
                 Enemy &enemy = g_Enemies[j];
                 BoundingSphere enemySphere = getEnemyBoundingSphere(enemy.position);
 
-                if (checkSphereSphereCollision(missileSphere, enemySphere)) {                    
+                if (checkSphereSphereCollision(missileSphere, enemySphere)) {
                     // Destrói o inimigo
                     std::swap(g_Enemies[j], g_Enemies.back());
                     g_Enemies.pop_back();
                     hit = true;
-                    break; 
+                    break;
                 }
             }
         } else { // Míssil do Inimigo -> Colide com a Nave
             BoundingSphere aircraftSphere = getAircraftBoundingSphere(g_AircraftPosition);
-            if (checkSphereSphereCollision(missileSphere, aircraftSphere)) {                
+            if (checkSphereSphereCollision(missileSphere, aircraftSphere)) {
                 // Aplica dano (se o jogo ainda não acabou)
                 if (!g_IsGameOver) {
                     g_AircraftLife -= 1;
 
-                    g_DamageTimer = damageDuration; 
+                    g_DamageTimer = damageDuration;
                 }
                 hit = true;
             }
         }
-        
+
         // =======================================================
         // Colisão Missil vs. Asteroides Aleatórios (Esfera vs. Cilindro)
         // =======================================================
 
         // Itera sobre os asteroides aleatórios (g_RandomAsteroids)
-        for (int j = g_RandomAsteroids.size() - 1; j >= 0; --j) 
+        for (int j = g_RandomAsteroids.size() - 1; j >= 0; --j)
         {
             glm::vec4 asteroidPos = g_RandomAsteroids[j];
             BoundingCylinder asteroidCylinder = getAsteroidBoundingCylinder(asteroidPos);
-            
-            if (checkCylinderSphereCollision(asteroidCylinder, missileSphere)) {                 
+
+            if (checkCylinderSphereCollision(asteroidCylinder, missileSphere)) {
                 std::swap(g_RandomAsteroids[j], g_RandomAsteroids.back());
-                g_RandomAsteroids.pop_back(); 
-                
+                g_RandomAsteroids.pop_back();
+
                 hit = true;
-                break; 
+                break;
             }
         }
 
@@ -2323,8 +2318,8 @@ void processCollisions() {
 glm::vec4 normalizedVec(glm::vec4 v) {
     float n = norm(v);
     v = v / n;
-    v.w = 0.0f; 
-    
+    v.w = 0.0f;
+
     return v;
 }
 
@@ -2332,13 +2327,13 @@ glm::vec4 normalizedVec(glm::vec4 v) {
 bool isGameOver() {
     if (g_AircraftLife <= 0) {
         g_IsGameOver = true;
-        return true; 
+        return true;
     }
-    
+
     if (g_Checkpoints.empty())
     {
         g_IsGameOver = true;
-        return true; 
+        return true;
     }
 
     return false;
@@ -2355,52 +2350,46 @@ void resetGame() {
     InitEnemies();
     initCheckpoints();
     initRandomAsteroids();
-    g_DamageTimer = 0.0f;    
-    g_Asteroid_t = 0.0f; 
-    glm::vec4 g_Asteroid_P0 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);    
-    glm::vec4 g_Asteroid_P1 = glm::vec4(12.0f, 4.0f, 4.0f, 1.0f);    
-    glm::vec4 g_Asteroid_P2 = glm::vec4(20.0f, 4.0f, -4.0f, 1.0f);   
-    glm::vec4 g_Asteroid_P3 = glm::vec4(16.0f, 0.0f, 0.0f, 1.0f);  
+    g_DamageTimer = 0.0f;
+    g_Asteroid_t = 0.0f;
     g_Missiles.clear();
 }
-
 
 // função exlusiva para adicionar as orientações e feedbacks na tela
 void showText(GLFWwindow* window){
     float pad = TextRendering_LineHeight(window);
     char buffer[80];
-    
+
     float margin_x = 0.05f;
     float margin_y_top = 0.05f;
-    float margin_y_bottom = 0.95f; 
 
     float est_width = 15.0f * TextRendering_CharWidth(window);
-    
+
     if (g_AircraftLife <= 0) {
-        float current_y = -1.0f + margin_y_top; 
+        float current_y = -1.0f + margin_y_top;
 
         TextRendering_PrintString(window, "GAME OVER! (Pressione ESC para sair)", -1.0f + margin_x, current_y, 1.0f);
-        current_y += pad; 
-        
+        current_y += pad;
+
         TextRendering_PrintString(window, "Pressione R para reiniciar", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
     } else if (g_Checkpoints.empty()) {
-        float current_y = -1.0f + margin_y_top; 
+        float current_y = -1.0f + margin_y_top;
 
         TextRendering_PrintString(window, "PARABENS! VOCE VENCEU! (Pressione ESC para sair)", -1.0f + margin_x, current_y, 1.0f);
-        current_y += pad; 
-        
+        current_y += pad;
+
         TextRendering_PrintString(window, "Pressione R para reiniciar", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
     } else if (!g_IsGameOver) {
         snprintf(buffer, 80, "Vida: %d", g_AircraftLife);
-        
+
         TextRendering_PrintString(window, buffer, 1.0f - margin_x - est_width, 1.0f - margin_y_top, 1.0f);
         float current_y = -1.0f + margin_y_top;
 
         TextRendering_PrintString(window, "Pressione ESC para sair", -1.0f + margin_x, current_y, 1.0f);
-        current_y += pad; 
-        
+        current_y += pad;
+
         TextRendering_PrintString(window, "C para alternar câmera livre", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
 
@@ -2415,42 +2404,40 @@ void showText(GLFWwindow* window){
 
         TextRendering_PrintString(window, "Pressione B para voo livre (desmonstração)", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
-        
+
         TextRendering_PrintString(window, "Pressione I para iniciar/pausar o jogo", -1.0f + margin_x, current_y, 1.0f);
         current_y += pad;
 
-        snprintf(buffer, 80, "Checkpoints Faltantes: %lu", g_Checkpoints.size());
+        snprintf(buffer, 80, "Checkpoints Faltantes: %llu", g_Checkpoints.size());
         TextRendering_PrintString(window, buffer, -1.0f + margin_x, 1.0f - margin_y_top, 1.0f);
     }
 }
 
-
 // inicia os checkpoints no jogo
 void initCheckpoints() {
     g_Checkpoints.clear();
-    
-    float orbit_distance = 16.0f; 
-    glm::vec4 center = moon_position; 
-    
-    g_Checkpoints.push_back(center + glm::vec4(orbit_distance, 0.0f, 0.0f, 1.0f));  
-    g_Checkpoints.push_back(center + glm::vec4(-orbit_distance, 0.0f, 0.0f, 1.0f)); 
-    g_Checkpoints.push_back(center + glm::vec4(0.0f, orbit_distance, 0.0f, 1.0f));  
-    g_Checkpoints.push_back(center + glm::vec4(0.0f, -orbit_distance, 0.0f, 1.0f)); 
-    g_Checkpoints.push_back(center + glm::vec4(0.0f, 0.0f, -orbit_distance, 1.0f)); 
-}
 
+    float orbit_distance = 16.0f;
+    glm::vec4 center = moon_position;
+
+    g_Checkpoints.push_back(center + glm::vec4(orbit_distance, 0.0f, 0.0f, 1.0f));
+    g_Checkpoints.push_back(center + glm::vec4(-orbit_distance, 0.0f, 0.0f, 1.0f));
+    g_Checkpoints.push_back(center + glm::vec4(0.0f, orbit_distance, 0.0f, 1.0f));
+    g_Checkpoints.push_back(center + glm::vec4(0.0f, -orbit_distance, 0.0f, 1.0f));
+    g_Checkpoints.push_back(center + glm::vec4(0.0f, 0.0f, -orbit_distance, 1.0f));
+}
 
 // Função que inicializa asteroides em posições aleatórias na órbita
 void initRandomAsteroids() {
     g_RandomAsteroids.clear();
-    float orbit_distance = 16.0f; 
-    glm::vec4 center = moon_position; 
+    float orbit_distance = 16.0f;
+    glm::vec4 center = moon_position;
 
     for (int i = 0; i < numRandomAsteroids; ++i) {
         glm::vec4 randomDir = glm::vec4(
-            randomFloat(-1.0f, 1.0f), 
-            randomFloat(-1.0f, 1.0f), 
-            randomFloat(-1.0f, 1.0f), 
+            randomFloat(-1.0f, 1.0f),
+            randomFloat(-1.0f, 1.0f),
+            randomFloat(-1.0f, 1.0f),
             0.0f
         );
         randomDir = normalizedVec(randomDir);
@@ -2467,10 +2454,10 @@ void initRandomAsteroids() {
 void fireMissile(const glm::vec4& startPos, const glm::vec4& direction, int ownerId) {
     Missile m;
     m.position = startPos;
-    m.forward = direction; 
-    m.forward.w = 0.0f; 
+    m.forward = direction;
+    m.forward.w = 0.0f;
     m.speed = missileSpeed;
-    m.fixedDistance = 16.0f; 
+    m.fixedDistance = 16.0f;
     m.isActive = true;
     m.ownerId = ownerId;
     m.lifeTime = missileLifespan;
@@ -2481,7 +2468,7 @@ void fireMissile(const glm::vec4& startPos, const glm::vec4& direction, int owne
 // atualiza a movimentação do missil
 void updateMissiles(float tprev, float tnow) {
     float delta_t = tnow - tprev;
-    float fixedDistance = 16.0f; 
+    float fixedDistance = 16.0f;
 
     for (auto it = g_Missiles.begin(); it != g_Missiles.end();) {
         Missile &m = *it;
@@ -2503,20 +2490,20 @@ void updateMissiles(float tprev, float tnow) {
 
         // O míssil avança na direção 'forward'
         glm::vec4 right_vec = normalizedVec(crossproduct(up_vec, m.forward));
-        
+
         // Angulo de avanço na esfera (usando o vetor UP e o vetor RIGHT)
-        float angle_of_advance = m.speed * delta_t * 0.05f; 
-        glm::mat4 moveMatrix = Matrix_Rotate(angle_of_advance, right_vec); 
+        float angle_of_advance = m.speed * delta_t * 0.05f;
+        glm::mat4 moveMatrix = Matrix_Rotate(angle_of_advance, right_vec);
 
         glm::vec4 relativePosition = currentPos - moon_position;
         relativePosition = moveMatrix * relativePosition;
-        
+
         // Reprojetar na distância fixa de órbita
         glm::vec4 finalDir = relativePosition; finalDir.w = 0.0f;
         finalDir = normalizedVec(finalDir);
         m.position = moon_position + (finalDir * fixedDistance);
         m.position.w = 1.0f;
-        
+
         // A direção FORWARD também precisa ser girada para acompanhar a curva.
         m.forward = normalizedVec(moveMatrix * m.forward);
 
