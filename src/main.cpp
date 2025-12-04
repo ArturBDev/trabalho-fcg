@@ -705,7 +705,7 @@ int main(int argc, char* argv[])
         glUniform1i(g_gouraud_uniform, gouraud);
 
         // desenhando o HUD ("progress bar" de vida)
-        if (g_AircraftLife > 0)
+        if (g_AircraftLife > 0 && !g_IsGameOver)
         {
             // Desativamos testes 3D (Z-buffer e Culling) para desenhar o HUD em 2D
             glDisable(GL_DEPTH_TEST);
