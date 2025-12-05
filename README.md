@@ -54,19 +54,20 @@ Os testes de colisão são realizados no arquivo `collisions.cpp` e são essenci
 
 ---
 
-## 📸 Imagens da Aplicação
+## Imagens da Aplicação
 
 
 
 * **Imagem 1:** Nave do jogador em órbita, mostrando um inimigo e a superfície da lua (plano) com iluminação Gouraud.
 
-![alt text](image.png)
+![alt text](image-2.png)
 
 * **Imagem 2:** A nave desvia de um asteroide com o *Heads-Up Display* (HUD) de vida no canto superior direito, o texto informativo e um *checkpoint*.
-![alt text](image-1.png)
+![alt text](image-3.png)
+
 ---
 
-## 🕹️ Manual de Utilização da Aplicação
+## Manual de Utilização da Aplicação
 
 | Tecla | Função | Detalhes |
 | :--- | :--- | :--- |
