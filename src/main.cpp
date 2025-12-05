@@ -360,7 +360,7 @@ int main(int argc, char* argv[])
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(800, 600, "INF01047 - Seu Cartao - Seu Nome", NULL, NULL);
+    window = glfwCreateWindow(800, 600, "Space Lunar Chase", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -1638,7 +1638,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     if(key == GLFW_KEY_I)
     {
-        if (action == GLFW_PRESS)
+        if (action == GLFW_PRESS && !g_FreeWorld)
             // Usuário apertou a tecla I, então começa o jogo, se apertar novamente pausa
             isIPressed = !isIPressed;
     }
@@ -1648,7 +1648,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         g_UseFirstPersonCamera = !g_UseFirstPersonCamera;
     }
 
-    if (key == GLFW_KEY_B && action == GLFW_PRESS)
+    if (key == GLFW_KEY_B && action == GLFW_PRESS && !isIPressed)
     {
         g_FreeWorld = !g_FreeWorld;
     }
@@ -2167,11 +2167,6 @@ void processCollisions() {
                 // Aplica dano (se o jogo ainda não acabou)
                 if (!g_IsGameOver) {
                     g_AircraftLife -= 1;
-
-                    // Verifica Game Over
-                    if (isGameOver()) {
-                    }
-
                     g_DamageTimer = damageDuration;
                 }
 
